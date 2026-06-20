@@ -16,7 +16,16 @@ STORE_PATH = ROOT / "deepseek_html_20260620_f1cabf.html"
 
 st.set_page_config(page_title="Metoy 科学小导师", page_icon="ET", layout="wide", initial_sidebar_state="expanded")
 
-st.markdown(
+
+def render_html(markup: str, target=None) -> None:
+    renderer = target or st
+    if hasattr(renderer, "html"):
+        renderer.html(markup)
+    else:
+        renderer.markdown(markup, unsafe_allow_html=True)
+
+
+render_html(
     """
     <style>
     .stApp {
@@ -432,8 +441,7 @@ st.markdown(
         .cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     </style>
-    """,
-    unsafe_allow_html=True,
+    """
 )
 
 
@@ -605,7 +613,7 @@ def render_message(message: dict[str, str]) -> None:
     bubble_class = "bot-bubble" if is_bot else "user-bubble"
     speaker = "Metoy科学小导师" if is_bot else "RootUser"
     content = escape(message["content"])
-    st.markdown(
+    render_html(
         f"""
         <div class="chat-row">
           <div class="{avatar_class}">{avatar}</div>
@@ -614,8 +622,7 @@ def render_message(message: dict[str, str]) -> None:
             <div class="bubble {bubble_class}">{content}</div>
           </div>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )
 
 
@@ -636,20 +643,20 @@ def render_streaming_message(content: str) -> None:
     placeholder = st.empty()
     shown = ""
     if not content:
-        placeholder.markdown(assistant_message_html("", cursor=False), unsafe_allow_html=True)
+        render_html(assistant_message_html("", cursor=False), placeholder)
         return
     chunk_size = 2 if len(content) < 220 else 4
     delay = 0.018 if len(content) < 500 else 0.01
     for start in range(0, len(content), chunk_size):
         shown = content[: start + chunk_size]
-        placeholder.markdown(assistant_message_html(shown, cursor=True), unsafe_allow_html=True)
+        render_html(assistant_message_html(shown, cursor=True), placeholder)
         time.sleep(delay)
-    placeholder.markdown(assistant_message_html(content, cursor=False), unsafe_allow_html=True)
+    render_html(assistant_message_html(content, cursor=False), placeholder)
 
 
 def render_thinking(response_mode: str, placeholder=None):
     slot = placeholder or st.empty()
-    slot.markdown(
+    render_html(
         f"""
         <div class="chat-row">
           <div class="bot-avatar">M</div>
@@ -662,7 +669,7 @@ def render_thinking(response_mode: str, placeholder=None):
           </div>
         </div>
         """,
-        unsafe_allow_html=True,
+        slot,
     )
     return slot
 
@@ -670,7 +677,7 @@ def render_thinking(response_mode: str, placeholder=None):
 def render_cards(cards: list[dict[str, str]]) -> None:
     if not cards:
         return
-    st.markdown('<div class="cards-grid">', unsafe_allow_html=True)
+    render_html('<div class="cards-grid">')
     for card in cards:
         title = escape(card.get("title", "未命名教具"))
         category = escape(card.get("category", "科学教具"))
@@ -679,7 +686,7 @@ def render_cards(cards: list[dict[str, str]]) -> None:
         description = escape(card.get("description", "用于课堂科学探究活动。"))
         source = escape(Path(card.get("source", "")).name or "本地教具说明书")
         icon = escape(card.get("icon", "科"))
-        st.markdown(
+        render_html(
             f"""
             <div class="aid-card">
               <div class="aid-head">
@@ -692,10 +699,9 @@ def render_cards(cards: list[dict[str, str]]) -> None:
               <span class="aid-meta">知识点：{knowledge}</span>
               <span class="aid-source">来源：{source}</span>
             </div>
-            """,
-            unsafe_allow_html=True,
+            """
         )
-    st.markdown("</div>", unsafe_allow_html=True)
+    render_html("</div>")
 
 
 def render_card_actions(cards: list[dict[str, str]], session: dict, response_mode: str, key_prefix: str) -> None:
@@ -728,18 +734,17 @@ def render_agent_architecture(result) -> None:
         ("7. Generator", "调用 GLM 或本地规则，生成学生版/开发者版回答。"),
         ("8. Verifier", f"质量状态：{quality.get('status', 'unknown')}，得分：{quality.get('score', '-')}."),
     ]
-    st.markdown('<div class="agent-grid">', unsafe_allow_html=True)
+    render_html('<div class="agent-grid">')
     for title, desc in nodes:
-        st.markdown(
+        render_html(
             f"""
             <div class="agent-node">
               <b>{escape(title)}</b>
               <span>{escape(desc)}</span>
             </div>
-            """,
-            unsafe_allow_html=True,
+            """
         )
-    st.markdown("</div>", unsafe_allow_html=True)
+    render_html("</div>")
 
     st.markdown("#### 本轮工具注册表")
     for tool in result.tool_summary or []:
@@ -750,21 +755,20 @@ def render_quality_checks(result) -> None:
     quality = result.quality_checks or {}
     st.metric("质量得分", quality.get("score", "-"), quality.get("status", "unknown"))
     used_tools = "、".join(quality.get("used_tools", [])) or "无"
-    st.markdown(f'<div class="small-muted">本轮工具：{escape(used_tools)}</div>', unsafe_allow_html=True)
-    st.markdown('<div class="check-grid">', unsafe_allow_html=True)
+    render_html(f'<div class="small-muted">本轮工具：{escape(used_tools)}</div>')
+    render_html('<div class="check-grid">')
     for check in quality.get("checks", []):
         cls = "check-pass" if check.get("pass") else "check-review"
         status = "通过" if check.get("pass") else "需要复核"
-        st.markdown(
+        render_html(
             f"""
             <div class="check-card {cls}">
               <strong>{escape(check.get("name", "检查项"))} · {status}</strong><br>
               <span>{escape(str(check.get("detail", "")))}</span>
             </div>
-            """,
-            unsafe_allow_html=True,
+            """
         )
-    st.markdown("</div>", unsafe_allow_html=True)
+    render_html("</div>")
     issues = quality.get("issues") or []
     if issues:
         st.warning("；".join(issues))
@@ -776,7 +780,7 @@ def render_store() -> None:
     if st.button("返回聊天", use_container_width=False):
         st.session_state["active_view"] = "chat"
         st.rerun()
-    st.markdown(
+    render_html(
         """
         <div class="store-frame-title">
           <div>
@@ -784,8 +788,7 @@ def render_store() -> None:
             <span>从智能体里直接查看教具和学习产品页面</span>
           </div>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )
     if not STORE_PATH.exists():
         st.error("没有找到商店网页文件。")
@@ -796,8 +799,8 @@ def render_store() -> None:
 init_sessions()
 
 with st.sidebar:
-    st.markdown('<div class="brand">Metoy 科学小导师</div>', unsafe_allow_html=True)
-    st.markdown('<div class="side-note">左侧查看历史对话，中间直接聊天。教具清单会严格来自本地说明书。</div>', unsafe_allow_html=True)
+    render_html('<div class="brand">Metoy 科学小导师</div>')
+    render_html('<div class="side-note">左侧查看历史对话，中间直接聊天。教具清单会严格来自本地说明书。</div>')
     top_actions = st.columns([0.78, 0.22], gap="small")
     with top_actions[0]:
         if st.button("新建对话", use_container_width=True):
@@ -841,7 +844,7 @@ if st.session_state.get("active_view") == "store":
 elif mode == "学生聊天":
     st.session_state["active_view"] = "chat"
     session = active_session()
-    st.markdown(
+    render_html(
         """
         <div class="topline">
           <div class="bot-avatar">M</div>
@@ -850,10 +853,9 @@ elif mode == "学生聊天":
             <div style="color:#788195;">直接问知识点、教具清单，或让它带你做实验</div>
           </div>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )
-    st.markdown(
+    render_html(
         f"""
         <div class="metric-strip">
           <div class="pill">本地资料 {index_count()} 条</div>
@@ -862,8 +864,7 @@ elif mode == "学生聊天":
           <div class="pill">{response_mode}</div>
           <div class="pill">GLM {'已配置' if get_agent().llm.available else '未配置'}</div>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )
 
     for message in session["messages"]:
@@ -958,15 +959,14 @@ else:
                     st.write(step.output)
         with docs_tab:
             for doc in result.documents:
-                st.markdown(
+                render_html(
                     f"""
                     <div class="source-box">
                     <strong>{doc.title}</strong> · {doc.category} · {doc.level}<br>
                     {doc.content[:260]}<br>
                     <small>{doc.path}</small>
                     </div>
-                    """,
-                    unsafe_allow_html=True,
+                    """
                 )
         with quality_tab:
             render_quality_checks(result)
