@@ -72,7 +72,12 @@ class GLMClient:
         return response.choices[0].message.content or ""
 
     def complete_json(self, system: str, user: str, fallback: dict[str, Any]) -> dict[str, Any]:
-        text = self.complete(system, user)
+        try:
+            text = self.complete(system, user)
+        except Exception as exc:
+            fallback = dict(fallback)
+            fallback["llm_error"] = str(exc)
+            return fallback
         try:
             import json
 

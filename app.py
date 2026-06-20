@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import time
 from html import escape
 from pathlib import Path
@@ -23,6 +24,63 @@ def render_html(markup: str, target=None) -> None:
         renderer.html(markup)
     else:
         renderer.markdown(markup, unsafe_allow_html=True)
+
+
+def inline_markdown_html(text: str) -> str:
+    html = escape(text)
+    html = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", html)
+    html = re.sub(r"`([^`]+)`", r"<code>\1</code>", html)
+    return html
+
+
+def markdown_to_bubble_html(text: str) -> str:
+    lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    parts: list[str] = ['<div class="md-content">']
+    list_mode: str | None = None
+
+    def close_list() -> None:
+        nonlocal list_mode
+        if list_mode:
+            parts.append(f"</{list_mode}>")
+            list_mode = None
+
+    for raw_line in lines:
+        line = raw_line.strip()
+        if not line:
+            close_list()
+            continue
+
+        heading = re.match(r"^(#{2,3})\s+(.+)$", line)
+        if heading:
+            close_list()
+            tag = "h2" if heading.group(1) == "##" else "h3"
+            parts.append(f"<{tag}>{inline_markdown_html(heading.group(2))}</{tag}>")
+            continue
+
+        bullet = re.match(r"^[-*]\s*(.+)$", line)
+        if bullet:
+            if list_mode != "ul":
+                close_list()
+                parts.append("<ul>")
+                list_mode = "ul"
+            parts.append(f"<li>{inline_markdown_html(bullet.group(1))}</li>")
+            continue
+
+        numbered = re.match(r"^\d+[.、]\s*(.+)$", line)
+        if numbered:
+            if list_mode != "ol":
+                close_list()
+                parts.append("<ol>")
+                list_mode = "ol"
+            parts.append(f"<li>{inline_markdown_html(numbered.group(1))}</li>")
+            continue
+
+        close_list()
+        parts.append(f"<p>{inline_markdown_html(line)}</p>")
+
+    close_list()
+    parts.append("</div>")
+    return "".join(parts)
 
 
 render_html(
@@ -195,7 +253,7 @@ render_html(
         padding: 16px 18px;
         line-height: 1.75;
         font-size: 1.02rem;
-        white-space: pre-wrap;
+        white-space: normal;
     }
     .bot-bubble {
         background: linear-gradient(120deg, #ffffff 0%, #f2f5fb 100%);
@@ -208,6 +266,43 @@ render_html(
         border: 1px solid #cfd4ff;
         color: #222733;
         max-width: 680px;
+    }
+    .md-content {
+        color: inherit;
+        line-height: 1.75;
+    }
+    .md-content p {
+        margin: 0 0 0.8rem;
+    }
+    .md-content p:last-child {
+        margin-bottom: 0;
+    }
+    .md-content strong {
+        color: #293042;
+        font-weight: 850;
+    }
+    .md-content h2,
+    .md-content h3 {
+        color: #293042;
+        font-weight: 900;
+        line-height: 1.3;
+        margin: 1.05rem 0 0.55rem;
+    }
+    .md-content h2 { font-size: 1.36rem; }
+    .md-content h3 { font-size: 1.08rem; }
+    .md-content ul,
+    .md-content ol {
+        margin: 0.2rem 0 0.9rem 1.2rem;
+        padding: 0;
+    }
+    .md-content li {
+        margin: 0.18rem 0;
+        padding-left: 0.15rem;
+    }
+    .store-actions {
+        display: flex;
+        justify-content: flex-start;
+        margin-bottom: 0.8rem;
     }
     .cards-grid {
         display: grid;
@@ -612,7 +707,7 @@ def render_message(message: dict[str, str]) -> None:
     avatar_class = "bot-avatar" if is_bot else "user-avatar"
     bubble_class = "bot-bubble" if is_bot else "user-bubble"
     speaker = "Metoy科学小导师" if is_bot else "RootUser"
-    content = escape(message["content"])
+    content = markdown_to_bubble_html(message["content"])
     render_html(
         f"""
         <div class="chat-row">
@@ -628,12 +723,13 @@ def render_message(message: dict[str, str]) -> None:
 
 def assistant_message_html(content: str, cursor: bool = False) -> str:
     cursor_html = '<span class="typing-cursor">|</span>' if cursor else ""
+    content_html = markdown_to_bubble_html(content)
     return f"""
     <div class="chat-row">
       <div class="bot-avatar">M</div>
       <div>
         <div class="speaker">Metoy科学小导师</div>
-        <div class="bubble bot-bubble">{escape(content)}{cursor_html}</div>
+        <div class="bubble bot-bubble">{content_html}{cursor_html}</div>
       </div>
     </div>
     """
@@ -777,9 +873,11 @@ def render_quality_checks(result) -> None:
 
 
 def render_store() -> None:
-    if st.button("返回聊天", use_container_width=False):
-        st.session_state["active_view"] = "chat"
-        st.rerun()
+    back_cols = st.columns([0.18, 0.82])
+    with back_cols[0]:
+        if st.button("← 返回聊天", key="store_back_top", type="primary", use_container_width=True):
+            st.session_state["active_view"] = "chat"
+            st.rerun()
     render_html(
         """
         <div class="store-frame-title">
@@ -801,6 +899,10 @@ init_sessions()
 with st.sidebar:
     render_html('<div class="brand">Metoy 科学小导师</div>')
     render_html('<div class="side-note">左侧查看历史对话，中间直接聊天。教具清单会严格来自本地说明书。</div>')
+    if st.session_state.get("active_view") == "store":
+        if st.button("← 返回聊天", key="sidebar_back_from_store", use_container_width=True):
+            st.session_state["active_view"] = "chat"
+            st.rerun()
     top_actions = st.columns([0.78, 0.22], gap="small")
     with top_actions[0]:
         if st.button("新建对话", use_container_width=True):
