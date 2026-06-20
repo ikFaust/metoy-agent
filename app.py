@@ -873,11 +873,6 @@ def render_quality_checks(result) -> None:
 
 
 def render_store() -> None:
-    back_cols = st.columns([0.18, 0.82])
-    with back_cols[0]:
-        if st.button("← 返回聊天", key="store_back_top", type="primary", use_container_width=True):
-            st.session_state["active_view"] = "chat"
-            st.rerun()
     render_html(
         """
         <div class="store-frame-title">
@@ -896,26 +891,30 @@ def render_store() -> None:
 
 init_sessions()
 
+view_param = st.query_params.get("view")
+if view_param in {"chat", "store"}:
+    st.session_state["active_view"] = view_param
+
 with st.sidebar:
     render_html('<div class="brand">Metoy 科学小导师</div>')
     render_html('<div class="side-note">左侧查看历史对话，中间直接聊天。教具清单会严格来自本地说明书。</div>')
     if st.session_state.get("active_view") == "store":
-        if st.button("← 返回聊天", key="sidebar_back_from_store", use_container_width=True):
-            st.session_state["active_view"] = "chat"
-            st.rerun()
+        st.link_button("← 返回聊天", "?view=chat", use_container_width=True)
     top_actions = st.columns([0.78, 0.22], gap="small")
     with top_actions[0]:
         if st.button("新建对话", use_container_width=True):
             st.session_state["active_view"] = "chat"
+            st.query_params["view"] = "chat"
             add_session()
             st.rerun()
     with top_actions[1]:
         if st.button("🛒", key="sidebar_store_button", use_container_width=True, help="打开教具商店"):
             st.session_state["active_view"] = "store"
+            st.query_params["view"] = "store"
             st.rerun()
 
     mode = st.radio("模式", ["学生聊天", "开发者控制台"], label_visibility="collapsed")
-    if st.session_state.get("last_mode") != mode:
+    if st.session_state.get("last_mode") != mode and st.session_state.get("active_view") != "store":
         st.session_state["active_view"] = "chat" if mode == "学生聊天" else "developer"
         st.session_state["last_mode"] = mode
     response_mode = st.radio(
