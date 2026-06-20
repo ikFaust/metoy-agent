@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: metoy-agent
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app.py --server.address 0.0.0.0 --server.port $PORT --server.headless true
+    envVars:
+      - key: ZHIPU_API_KEY
+        sync: false
+      - key: ZHIPU_BASE_URL
+        value: https://open.bigmodel.cn/api/paas/v4
+      - key: ZHIPU_MODEL
+        value: glm-4.5-air
+      - key: ZHIPU_THINKING
+        value: disabled
+      - key: ZHIPU_MAX_TOKENS
+        value: "900"
+      - key: ZHIPU_TEMPERATURE
+        value: "0.55"
+      - key: ZHIPU_TIMEOUT
+        value: "18"
