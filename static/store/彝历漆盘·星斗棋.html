@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>彝历漆盘 · 星斗棋 - 3D 交互展示</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Microsoft YaHei', sans-serif; background-color: #2b1a0e; }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.7);
+            color: #f0d5b0;
+            padding: 14px 24px;
+            border-radius: 10px;
+            border-left: 6px solid #e03a1a;
+            pointer-events: none;
+            z-index: 10;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+        }
+        #info h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 400;
+            letter-spacing: 3px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        #info p {
+            margin: 6px 0 0;
+            font-size: 14px;
+            opacity: 0.8;
+            color: #e8c9a0;
+        }
+        #controls-hint {
+            position: absolute;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(240, 213, 176, 0.7);
+            background: rgba(0,0,0,0.5);
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 14px;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(224, 58, 26, 0.3);
+            pointer-events: none;
+            z-index: 10;
+        }
+        .label {
+            color: #f0d5b0;
+            font-size: 14px;
+            font-weight: bold;
+            text-shadow: 0 0 15px rgba(0,0,0,0.9);
+            background: rgba(30, 20, 10, 0.75);
+            padding: 4px 14px;
+            border-radius: 20px;
+            border: 1px solid rgba(224, 58, 26, 0.5);
+            backdrop-filter: blur(2px);
+            pointer-events: none;
+            white-space: nowrap;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        .label-highlight {
+            background: #e03a1a;
+            color: #fff;
+            border-color: #e03a1a;
+            box-shadow: 0 0 20px rgba(224, 58, 26, 0.6);
+        }
+        .label-small {
+            font-size: 11px;
+            padding: 2px 10px;
+            background: rgba(0,0,0,0.6);
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h1>🔥 彝历漆盘 · 星斗棋</h1>
+        <p>彝族漆器艺术 × 十月太阳历 · 数学策略与文化认知</p>
+    </div>
+    <div id="controls-hint">🔄 鼠标拖拽旋转 · 滚轮缩放 · 自动旋转中</div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.152.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.152.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        // --- 初始化场景 ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x2b1a0e); // 深色背景衬托漆器色彩
+
+        // --- 相机 ---
+        const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 50);
+        camera.position.set(8, 6, 10);
+        camera.lookAt(0, 0.5, 0);
+
+        // --- 渲染器 WebGL ---
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
+
+        // --- 渲染器 CSS2D ---
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        labelRenderer.domElement.style.left = '0px';
+        labelRenderer.domElement.style.pointerEvents = 'none';
+        document.body.appendChild(labelRenderer.domElement);
+
+        // --- 控制器 ---
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 1.2;
+        controls.target.set(0, 1.0, 0);
+        controls.minDistance = 4;
+        controls.maxDistance = 20;
+        controls.maxPolarAngle = Math.PI / 2.2;
+
+        // 点击切换自动旋转
+        renderer.domElement.addEventListener('click', () => {
+            controls.autoRotate = !controls.autoRotate;
+            const hint = document.getElementById('controls-hint');
+            hint.textContent = controls.autoRotate ? '🔄 自动旋转中 · 点击暂停' : '⏸️ 已暂停 · 点击恢复';
+        });
+
+        // --- 光照 ---
+        const ambient = new THREE.AmbientLight(0x404060, 0.4);
+        scene.add(ambient);
+
+        const mainLight = new THREE.DirectionalLight(0xffeedd, 1.2);
+        mainLight.position.set(5, 10, 7);
+        mainLight.castShadow = true;
+        mainLight.shadow.mapSize.width = 1024;
+        mainLight.shadow.mapSize.height = 1024;
+        mainLight.shadow.camera.near = 0.5;
+        mainLight.shadow.camera.far = 30;
+        mainLight.shadow.camera.left = -8;
+        mainLight.shadow.camera.right = 8;
+        mainLight.shadow.camera.top = 8;
+        mainLight.shadow.camera.bottom = -8;
+        scene.add(mainLight);
+
+        const fillLight = new THREE.DirectionalLight(0xccbbaa, 0.5);
+        fillLight.position.set(-4, 2, -5);
+        scene.add(fillLight);
+
+        const rimLight = new THREE.DirectionalLight(0xffcc99, 0.3);
+        rimLight.position.set(-2, 1, 8);
+        scene.add(rimLight);
+
+        // 添加底部补光
+        const bottomLight = new THREE.PointLight(0x884422, 0.3);
+        bottomLight.position.set(0, -1, 0);
+        scene.add(bottomLight);
+
+        // --- 地面 (装饰性) ---
+        const groundGeom = new THREE.CircleGeometry(6, 32);
+        const groundMat = new THREE.MeshStandardMaterial({
+            color: 0x3d2b1a,
+            roughness: 0.9,
+            metalness: 0.0,
+            side: THREE.DoubleSide
+        });
+        const ground = new THREE.Mesh(groundGeom, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -0.01;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // --- 辅助：创建标签 ---
+        function createLabel(text, color = '#f0d5b0', bg = 'rgba(30,20,10,0.8)', extraClass = '') {
+            const div = document.createElement('div');
+            div.textContent = text;
+            div.className = `label ${extraClass}`;
+            div.style.color = color;
+            div.style.backgroundColor = bg;
+            return new CSS2DObject(div);
+        }
+
+        // --- 构建棋盘 ---
+        const boardGroup = new THREE.Group();
+
+        // 1. 底座 (木盘)
+        const baseMat = new THREE.MeshStandardMaterial({
+            color: 0x5a3d2b,
+            roughness: 0.7,
+            metalness: 0.05
+        });
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(3.0, 3.2, 0.4, 48), baseMat);
+        base.position.y = 0.2;
+        base.castShadow = true;
+        base.receiveShadow = true;
+        boardGroup.add(base);
+
+        // 2. 面板 (黑色漆面)
+        const panelMat = new THREE.MeshStandardMaterial({
+            color: 0x1a0e08,
+            roughness: 0.3,
+            metalness: 0.1
+        });
+        const panel = new THREE.Mesh(new THREE.CylinderGeometry(2.8, 2.8, 0.1, 48), panelMat);
+        panel.position.y = 0.45;
+        panel.castShadow = true;
+        panel.receiveShadow = true;
+        boardGroup.add(panel);
+
+        // 3. 10个扇形区域 (用圆环分段 + 平面组合)
+        const segmentMat = new THREE.MeshStandardMaterial({
+            color: 0x3d2415,
+            roughness: 0.6,
+            side: THREE.DoubleSide
+        });
+        const segmentCount = 10;
+        const innerRadius = 0.6;
+        const outerRadius = 2.7;
+        const angleStep = (Math.PI * 2) / segmentCount;
+
+        // 绘制扇形 (使用ShapeGeometry)
+        for (let i = 0; i < segmentCount; i++) {
+            const startAngle = i * angleStep;
+            const endAngle = startAngle + angleStep;
+            
+            const shape = new THREE.Shape();
+            // 外弧
+            const segments = 16;
+            shape.moveTo(innerRadius * Math.cos(startAngle), innerRadius * Math.sin(startAngle));
+            for (let j = 0; j <= segments; j++) {
+                const t = j / segments;
+                const angle = startAngle + t * (endAngle - startAngle);
+                const r = outerRadius;
+                shape.lineTo(r * Math.cos(angle), r * Math.sin(angle));
+            }
+            // 内弧反向
+            for (let j = segments; j >= 0; j--) {
+                const t = j / segments;
+                const angle = startAngle + t * (endAngle - startAngle);
+                const r = innerRadius;
+                shape.lineTo(r * Math.cos(angle), r * Math.sin(angle));
+            }
+            shape.closePath();
+
+            const geom = new THREE.ShapeGeometry(shape);
+            // 随机分配颜色 (红黄黑)
+            let color;
+            const rand = Math.random();
+            if (rand < 0.33) color = 0xb52a1a; // 红
+            else if (rand < 0.66) color = 0xd9a84b; // 黄
+            else color = 0x2a1a0e; // 黑 (深色)
+            const mat = new THREE.MeshStandardMaterial({
+                color: color,
+                roughness: 0.5,
+                metalness: 0.1,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.8
+            });
+            const mesh = new THREE.Mesh(geom, mat);
+            mesh.rotation.x = -Math.PI / 2;
+            mesh.position.y = 0.5;
+            mesh.castShadow = false;
+            mesh.receiveShadow = true;
+            boardGroup.add(mesh);
+
+            // 添加边框线 (分隔)
+            const edgeMat = new THREE.LineBasicMaterial({ color: 0xe0b070 });
+            const points = [];
+            const r1 = innerRadius, r2 = outerRadius;
+            const a1 = startAngle, a2 = endAngle;
+            // 两条径向线
+            points.push(new THREE.Vector3(r1 * Math.cos(a1), 0, r1 * Math.sin(a1)));
+            points.push(new THREE.Vector3(r2 * Math.cos(a1), 0, r2 * Math.sin(a1)));
+            points.push(new THREE.Vector3(r2 * Math.cos(a2), 0, r2 * Math.sin(a2)));
+            points.push(new THREE.Vector3(r1 * Math.cos(a2), 0, r1 * Math.sin(a2)));
+            // 外弧
+            for (let j = 0; j <= 20; j++) {
+                const t = j / 20;
+                const angle = a1 + t * (a2 - a1);
+                points.push(new THREE.Vector3(r2 * Math.cos(angle), 0, r2 * Math.sin(angle)));
+            }
+            // 内弧
+            for (let j = 20; j >= 0; j--) {
+                const t = j / 20;
+                const angle = a1 + t * (a2 - a1);
+                points.push(new THREE.Vector3(r1 * Math.cos(angle), 0, r1 * Math.sin(angle)));
+            }
+            const lineGeom = new THREE.BufferGeometry().setFromPoints(points);
+            const line = new THREE.Line(lineGeom, edgeMat);
+            line.position.y = 0.5;
+            boardGroup.add(line);
+        }
+
+        // 4. 中心火塘 (圆环)
+        const fireMat = new THREE.MeshStandardMaterial({
+            color: 0xe03a1a,
+            emissive: 0x882211,
+            emissiveIntensity: 0.3,
+            roughness: 0.4
+        });
+        const fireRing = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.08, 16, 32), fireMat);
+        fireRing.rotation.x = Math.PI / 2;
+        fireRing.position.y = 0.55;
+        boardGroup.add(fireRing);
+
+        // 中心圆盘
+        const centerMat = new THREE.MeshStandardMaterial({
+            color: 0x1a0e08,
+            roughness: 0.2,
+            metalness: 0.2
+        });
+        const center = new THREE.Mesh(new THREE.CircleGeometry(0.4, 24), centerMat);
+        center.rotation.x = -Math.PI / 2;
+        center.position.y = 0.52;
+        boardGroup.add(center);
+
+        // 5. 装饰纹样 (彝族特色，用简单几何模拟)
+        // 外围一圈小圆点 (代表星星)
+        const dotMat = new THREE.MeshStandardMaterial({ color: 0xd9a84b });
+        for (let i = 0; i < 36; i++) {
+            const angle = (i / 36) * Math.PI * 2;
+            const radius = 2.9;
+            const dot = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6), dotMat);
+            dot.position.set(radius * Math.cos(angle), 0.52, radius * Math.sin(angle));
+            boardGroup.add(dot);
+        }
+
+        // 内圈纹样 (火纹抽象)
+        const fireDecorMat = new THREE.MeshStandardMaterial({ color: 0xe03a1a });
+        for (let i = 0; i < 10; i++) {
+            const angle = (i / 10) * Math.PI * 2 + 0.1;
+            const radius = 1.2;
+            const decor = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.03, 8, 12), fireDecorMat);
+            decor.position.set(radius * Math.cos(angle), 0.52, radius * Math.sin(angle));
+            decor.rotation.x = Math.PI / 2;
+            boardGroup.add(decor);
+        }
+
+        scene.add(boardGroup);
+
+        // --- 棋子 (分布在棋盘上) ---
+        const pieceGroup = new THREE.Group();
+        const colors = [0xe03a1a, 0xd9a84b, 0x1a0e08]; // 红黄黑
+        // 创建多种棋子
+        const piecePositions = [];
+        // 随机生成30个棋子位置，分布在扇形区域
+        for (let i = 0; i < 30; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 0.8 + Math.random() * 1.8;
+            const x = radius * Math.cos(angle);
+            const z = radius * Math.sin(angle);
+            // 避免重叠 (简单检查)
+            let tooClose = false;
+            for (let p of piecePositions) {
+                if (Math.sqrt((p.x-x)**2 + (p.z-z)**2) < 0.2) { tooClose = true; break; }
+            }
+            if (!tooClose) {
+                piecePositions.push({x, z});
+            }
+        }
+
+        piecePositions.forEach(pos => {
+            const colorIdx = Math.floor(Math.random() * 3);
+            const color = colors[colorIdx];
+            const mat = new THREE.MeshStandardMaterial({
+                color: color,
+                roughness: 0.3,
+                metalness: 0.2,
+                emissive: color === 0xe03a1a ? new THREE.Color(0x441111) : new THREE.Color(0x000000),
+                emissiveIntensity: 0.1
+            });
+            // 棋子形状：扁球或圆柱
+            const type = Math.random() > 0.5 ? 'sphere' : 'cylinder';
+            let mesh;
+            if (type === 'sphere') {
+                mesh = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12), mat);
+            } else {
+                mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.15, 8), mat);
+                mesh.position.y = 0.075;
+            }
+            mesh.position.set(pos.x, 0.52, pos.z);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            pieceGroup.add(mesh);
+        });
+
+        // 添加一些堆叠的棋子 (在火塘附近)
+        const stackMat = new THREE.MeshStandardMaterial({ color: 0xd9a84b });
+        for (let i = 0; i < 5; i++) {
+            const angle = (i / 5) * Math.PI * 2 + 0.2;
+            const radius = 0.3;
+            const x = radius * Math.cos(angle);
+            const z = radius * Math.sin(angle);
+            const piece = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.12, 8), stackMat);
+            piece.position.set(x, 0.52 + 0.06, z);
+            piece.castShadow = true;
+            pieceGroup.add(piece);
+        }
+
+        scene.add(pieceGroup);
+
+        // --- 添加标签 (CSS2D) ---
+        // 棋盘标题
+        const titleLabel = createLabel('🔥 彝历漆盘 · 星斗棋', '#fff', 'rgba(224,58,26,0.9)', 'label-highlight');
+        titleLabel.position.set(0, 2.0, 0);
+        scene.add(titleLabel);
+
+        // 十月太阳历标注
+        for (let i = 0; i < 10; i++) {
+            const angle = i * angleStep + angleStep/2;
+            const radius = 2.3;
+            const x = radius * Math.cos(angle);
+            const z = radius * Math.sin(angle);
+            const label = createLabel(`月${i+1}`, '#f0d5b0', 'rgba(0,0,0,0.6)', 'label-small');
+            label.position.set(x, 0.6, z);
+            scene.add(label);
+        }
+
+        // 中心火塘
+        const fireLabel = createLabel('🔥 火塘', '#ffaa44', 'rgba(0,0,0,0.7)');
+        fireLabel.position.set(0, 0.9, 0.5);
+        scene.add(fireLabel);
+
+        // 特殊节点 (火把节, 彝年)
+        const specialAngles = [0, Math.PI/2, Math.PI, 3*Math.PI/2];
+        const specialNames = ['🔥 火把节', '🌾 彝年', '🌞 太阳祭', '🌙 月亮节'];
+        specialAngles.forEach((angle, idx) => {
+            const radius = 1.8;
+            const x = radius * Math.cos(angle);
+            const z = radius * Math.sin(angle);
+            const label = createLabel(specialNames[idx], '#fff', 'rgba(224,58,26,0.8)', 'label-small');
+            label.position.set(x, 0.7, z);
+            scene.add(label);
+        });
+
+        // 文化元素标签
+        const cultureLabel = createLabel('🎨 彝族漆器 · 红黄黑', '#d9a84b', 'rgba(30,20,10,0.8)');
+        cultureLabel.position.set(2.0, 1.5, 2.5);
+        scene.add(cultureLabel);
+
+        const mathLabel = createLabel('🧮 数学策略 · 36倍数', '#f0d5b0', 'rgba(0,0,0,0.7)');
+        mathLabel.position.set(-2.5, 1.5, -2.0);
+        scene.add(mathLabel);
+
+        // 装饰性标签：星斗
+        const starLabel = createLabel('✨ 星斗棋', '#ffdd88', 'rgba(0,0,0,0.5)');
+        starLabel.position.set(0.5, 2.2, -2.0);
+        scene.add(starLabel);
+
+        // --- 动画循环 ---
+        let clock = new THREE.Clock();
+
+        function animate() {
+            const delta = clock.getDelta();
+            const elapsedTime = performance.now() / 1000;
+
+            // 控制自动旋转
+            controls.update();
+
+            // 渲染
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+
+        // --- 窗口自适应 ---
+        window.addEventListener('resize', onWindowResize, false);
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        console.log('“彝历漆盘 · 星斗棋” 3D场景已加载');
+    </script>
+</body>
+</html>

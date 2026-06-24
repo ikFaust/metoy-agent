@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>傣族竹楼榫卯积木 + 声学探索 3D 展示</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Microsoft YaHei', sans-serif; }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.6);
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            pointer-events: none;
+            z-index: 10;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            border-left: 4px solid #f3b33d;
+        }
+        #info h1 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 400;
+            letter-spacing: 2px;
+        }
+        #info p {
+            margin: 5px 0 0;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        #controls-hint {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.6);
+            background: rgba(0,0,0,0.4);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            pointer-events: none;
+            z-index: 10;
+            backdrop-filter: blur(4px);
+        }
+        .label {
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.5);
+            padding: 4px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.3);
+            backdrop-filter: blur(2px);
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        .label-small {
+            font-size: 11px;
+            padding: 2px 8px;
+            background: rgba(0,0,0,0.4);
+        }
+        .label-highlight {
+            background: #f3b33d;
+            color: #333;
+            border-color: #f3b33d;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h1>🏡 傣族竹楼 · 榫卯积木 + 声学探索</h1>
+        <p>融合云南民族文化与科学教育 | 鼠标拖拽旋转 / 滚轮缩放</p>
+    </div>
+    <div id="controls-hint">🔄 自动旋转中 | 点击可暂停</div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.152.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.152.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        // --- 初始化场景 ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x8ecae6); // 淡蓝色天空
+        scene.fog = new THREE.Fog(0x8ecae6, 20, 50);
+
+        // --- 相机 ---
+        const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(8, 6, 10);
+        camera.lookAt(0, 2.5, 0);
+
+        // --- 渲染器 WebGL ---
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
+
+        // --- 渲染器 CSS2D (标签) ---
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        labelRenderer.domElement.style.left = '0px';
+        labelRenderer.domElement.style.pointerEvents = 'none'; // 允许点击穿透
+        document.body.appendChild(labelRenderer.domElement);
+
+        // --- 控制器 ---
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 1.5;
+        controls.target.set(0, 2.5, 0);
+        controls.maxPolarAngle = Math.PI / 2.2;
+        controls.minDistance = 4;
+        controls.maxDistance = 20;
+
+        // 点击切换自动旋转
+        renderer.domElement.addEventListener('click', () => {
+            controls.autoRotate = !controls.autoRotate;
+            const hint = document.getElementById('controls-hint');
+            hint.textContent = controls.autoRotate ? '🔄 自动旋转中 | 点击暂停' : '⏸️ 已暂停 | 点击恢复';
+        });
+
+        // --- 光照 ---
+        // 环境光
+        const ambient = new THREE.AmbientLight(0x404060, 0.5);
+        scene.add(ambient);
+
+        // 主光源 - 产生阴影
+        const dirLight = new THREE.DirectionalLight(0xfff5e6, 1.2);
+        dirLight.position.set(8, 12, 6);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        dirLight.shadow.camera.near = 0.5;
+        dirLight.shadow.camera.far = 30;
+        dirLight.shadow.camera.left = -10;
+        dirLight.shadow.camera.right = 10;
+        dirLight.shadow.camera.top = 10;
+        dirLight.shadow.camera.bottom = -10;
+        scene.add(dirLight);
+
+        const fillLight = new THREE.DirectionalLight(0xccddff, 0.4);
+        fillLight.position.set(-5, 3, -5);
+        scene.add(fillLight);
+
+        const backLight = new THREE.DirectionalLight(0xffdd99, 0.3);
+        backLight.position.set(-3, 2, 8);
+        scene.add(backLight);
+
+        // 地面光
+        const groundLight = new THREE.PointLight(0x88aaff, 0.3, 20);
+        groundLight.position.set(0, 1, 0);
+        scene.add(groundLight);
+
+        // --- 地面 ---
+        const groundGeom = new THREE.CircleGeometry(12, 32);
+        const groundMat = new THREE.MeshStandardMaterial({
+            color: 0x7cb342,
+            roughness: 0.8,
+            metalness: 0.1,
+            side: THREE.DoubleSide
+        });
+        const ground = new THREE.Mesh(groundGeom, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -0.01;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // 草地装饰（小圆片）
+        for (let i = 0; i < 200; i++) {
+            const blade = new THREE.Mesh(
+                new THREE.CircleGeometry(0.05, 4),
+                new THREE.MeshStandardMaterial({ color: 0x4caf50, side: THREE.DoubleSide })
+            );
+            blade.position.x = (Math.random() - 0.5) * 20;
+            blade.position.z = (Math.random() - 0.5) * 20;
+            blade.position.y = 0;
+            blade.rotation.x = -Math.PI / 2;
+            blade.rotation.z = Math.random() * Math.PI;
+            blade.scale.set(1, 1, 1 + Math.random() * 2);
+            scene.add(blade);
+        }
+
+        // --- 辅助工具：创建标签 ---
+        function createLabel(text, color = '#fff', bg = 'rgba(0,0,0,0.6)', extraClass = '') {
+            const div = document.createElement('div');
+            div.textContent = text;
+            div.className = `label ${extraClass}`;
+            div.style.color = color;
+            div.style.backgroundColor = bg;
+            return new CSS2DObject(div);
+        }
+
+        // --- 构建竹楼 ---
+        const woodColor = 0x8b6b4d;
+        const woodLight = 0xc49a6c;
+        const roofColor = 0x6d4c2a;
+        const pillarColor = 0x7d5e3a;
+
+        const buildingGroup = new THREE.Group();
+
+        // 1. 柱子 (4根主柱 + 4根副柱)
+        const pillarPositions = [
+            [-1.8, -2.2], [1.8, -2.2], [1.8, 2.2], [-1.8, 2.2],
+            [-1.0, -2.8], [1.0, -2.8], [1.0, 2.8], [-1.0, 2.8] // 副柱
+        ];
+        const pillarHeight = 2.6;
+        const pillarRadius = 0.12;
+        const pillarMat = new THREE.MeshStandardMaterial({ color: pillarColor, roughness: 0.7, metalness: 0.1 });
+
+        pillarPositions.forEach(pos => {
+            const pillar = new THREE.Mesh(new THREE.CylinderGeometry(pillarRadius, pillarRadius * 1.1, pillarHeight, 8), pillarMat);
+            pillar.position.set(pos[0], pillarHeight/2, pos[1]);
+            pillar.castShadow = true;
+            pillar.receiveShadow = true;
+            buildingGroup.add(pillar);
+        });
+
+        // 2. 地板 (楼面)
+        const floorMat = new THREE.MeshStandardMaterial({ color: woodLight, roughness: 0.6, metalness: 0.05 });
+        const floor = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.2, 5.8), floorMat);
+        floor.position.set(0, pillarHeight, 0);
+        floor.castShadow = true;
+        floor.receiveShadow = true;
+        buildingGroup.add(floor);
+
+        // 3. 栏杆 (垂直木条 + 横梁)
+        const railMat = new THREE.MeshStandardMaterial({ color: woodColor, roughness: 0.7 });
+        // 垂直栏杆
+        const railPositions = [];
+        for (let z = -2.6; z <= 2.6; z+=0.5) {
+            if (Math.abs(z) < 0.3) continue;
+            railPositions.push([-2.1, z]);
+            railPositions.push([2.1, z]);
+        }
+        for (let x = -2.0; x <= 2.0; x+=0.5) {
+            if (Math.abs(x) < 0.3) continue;
+            railPositions.push([x, -2.8]);
+            railPositions.push([x, 2.8]);
+        }
+        railPositions.forEach(pos => {
+            const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.6, 6), railMat);
+            rail.position.set(pos[0], pillarHeight + 0.1 + 0.3, pos[1]);
+            rail.castShadow = true;
+            buildingGroup.add(rail);
+        });
+        // 横梁 (上下)
+        const beamMat = new THREE.MeshStandardMaterial({ color: woodLight, roughness: 0.6 });
+        const beamPos = [
+            [-2.1, 0, 0], [2.1, 0, 0], [0, 0, -2.8], [0, 0, 2.8]
+        ];
+        beamPos.forEach(pos => {
+            const isX = pos[0] !== 0;
+            const len = isX ? 5.6 : 4.0;
+            const beam = new THREE.Mesh(new THREE.BoxGeometry(isX ? len : 0.06, 0.06, isX ? 0.06 : len), beamMat);
+            beam.position.set(pos[0], pillarHeight + 0.1, pos[2]);
+            buildingGroup.add(beam);
+            // 上横梁
+            const beam2 = beam.clone();
+            beam2.position.y = pillarHeight + 0.1 + 0.6;
+            buildingGroup.add(beam2);
+        });
+
+        // 4. 榫卯结构 (在柱头处添加突出方块)
+        const mortiseMat = new THREE.MeshStandardMaterial({ color: 0xb87c4b, emissive: 0x2a1e0f, emissiveIntensity: 0.1 });
+        const mainPillarPos = [[-1.8, -2.2], [1.8, -2.2], [1.8, 2.2], [-1.8, 2.2]];
+        mainPillarPos.forEach(pos => {
+            // 在柱头四个方向添加小方块
+            const offsets = [[0.25, 0], [-0.25, 0], [0, 0.25], [0, -0.25]];
+            offsets.forEach(off => {
+                const block = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), mortiseMat);
+                block.position.set(pos[0] + off[0], pillarHeight + 0.1, pos[1] + off[1]);
+                block.castShadow = true;
+                buildingGroup.add(block);
+            });
+        });
+
+        // 5. 屋顶 (人字形，使用ExtrudeGeometry)
+        const roofWidth = 2.6;
+        const roofHeight = 1.8;
+        const roofDepth = 6.2;
+        const roofShape = new THREE.Shape();
+        roofShape.moveTo(-roofWidth, 0);
+        roofShape.lineTo(0, roofHeight);
+        roofShape.lineTo(roofWidth, 0);
+        roofShape.closePath();
+
+        const extrudeSettings = {
+            depth: roofDepth,
+            bevelEnabled: false
+        };
+        const roofGeom = new THREE.ExtrudeGeometry(roofShape, extrudeSettings);
+        // 平移使得屋顶底部在y=0，且居中
+        roofGeom.translate(0, 0, -roofDepth/2);
+        
+        const roofMat = new THREE.MeshStandardMaterial({
+            color: 0x6d4c2a,
+            roughness: 0.8,
+            metalness: 0.05,
+            side: THREE.DoubleSide,
+            flatShading: true
+        });
+        const roofMesh = new THREE.Mesh(roofGeom, roofMat);
+        roofMesh.position.set(0, pillarHeight + 0.2, 0); // 地板顶面
+        roofMesh.castShadow = true;
+        roofMesh.receiveShadow = true;
+        buildingGroup.add(roofMesh);
+
+        // 屋顶装饰（屋脊两端翘起，用锥体）
+        const decorMat = new THREE.MeshStandardMaterial({ color: 0x8d6e3f });
+        for (let z of [-roofDepth/2 + 0.3, roofDepth/2 - 0.3]) {
+            const decor = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.4, 6), decorMat);
+            decor.position.set(0, pillarHeight + 0.2 + roofHeight, z);
+            decor.rotation.z = 0.2;
+            buildingGroup.add(decor);
+        }
+
+        // 添加一些竹子的装饰（周围）
+        const bambooMat = new THREE.MeshStandardMaterial({ color: 0x4caf50, roughness: 0.6 });
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2 + 0.3;
+            const radius = 3.8;
+            const x = Math.cos(angle) * radius;
+            const z = Math.sin(angle) * radius;
+            const bamboo = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 1.2 + Math.random()*0.5, 6), bambooMat);
+            bamboo.position.set(x, 0.6, z);
+            bamboo.castShadow = true;
+            buildingGroup.add(bamboo);
+            // 叶子
+            const leafMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32 });
+            for (let j = 0; j < 3; j++) {
+                const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.1, 4), leafMat);
+                leaf.position.set(x + (Math.random()-0.5)*0.3, 1.0 + Math.random()*0.4, z + (Math.random()-0.5)*0.3);
+                buildingGroup.add(leaf);
+            }
+        }
+
+        scene.add(buildingGroup);
+
+        // --- 声学探索元素 ---
+
+        // 1. 象脚鼓 (多个)
+        function createDrum(posX, posZ, scale = 1) {
+            const group = new THREE.Group();
+            const drumMat = new THREE.MeshStandardMaterial({ color: 0xa0522d, roughness: 0.4, metalness: 0.1 });
+            const drumMatTop = new THREE.MeshStandardMaterial({ color: 0xd2b48c, roughness: 0.3 });
+            
+            // 鼓身 (圆台)
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.25*scale, 0.4*scale, 0.7*scale, 12), drumMat);
+            body.position.y = 0.35*scale;
+            body.castShadow = true;
+            group.add(body);
+            
+            // 鼓面
+            const top = new THREE.Mesh(new THREE.CylinderGeometry(0.25*scale, 0.25*scale, 0.05*scale, 12), drumMatTop);
+            top.position.y = 0.7*scale + 0.025*scale;
+            top.castShadow = true;
+            group.add(top);
+            
+            // 鼓底
+            const bottom = new THREE.Mesh(new THREE.CylinderGeometry(0.4*scale, 0.4*scale, 0.05*scale, 12), drumMatTop);
+            bottom.position.y = 0.025*scale;
+            bottom.castShadow = true;
+            group.add(bottom);
+            
+            // 装饰条纹
+            const stripeMat = new THREE.MeshStandardMaterial({ color: 0xcd7f32 });
+            for (let i = 0; i < 3; i++) {
+                const stripe = new THREE.Mesh(new THREE.TorusGeometry(0.28*scale, 0.02*scale, 8, 12), stripeMat);
+                stripe.position.y = 0.15*scale + i*0.2*scale;
+                stripe.rotation.x = Math.PI/2;
+                group.add(stripe);
+            }
+            
+            group.position.set(posX, 0, posZ);
+            return group;
+        }
+
+        // 放置鼓在建筑周围
+        const drumPositions = [
+            [-3.5, -3.0], [4.0, -2.5], [-3.8, 3.2], [4.2, 2.8]
+        ];
+        drumPositions.forEach((pos, idx) => {
+            const drum = createDrum(pos[0], pos[1], 0.7 + Math.random()*0.2);
+            scene.add(drum);
+            // 添加标签
+            const label = createLabel('🥁 象脚鼓', '#fff', 'rgba(160,82,45,0.8)', 'label-small');
+            label.position.set(pos[0], 0.8, pos[1]);
+            scene.add(label);
+        });
+
+        // 2. 声波环 (围绕鼓的环形波动)
+        const waveGroup = new THREE.Group();
+        const waveMat = new THREE.MeshBasicMaterial({
+            color: 0xffaa44,
+            transparent: true,
+            opacity: 0.3,
+            side: THREE.DoubleSide
+        });
+        const waveRings = [];
+        drumPositions.forEach((pos, idx) => {
+            const ringCount = 3;
+            for (let i = 0; i < ringCount; i++) {
+                const radius = 0.6 + i * 0.3;
+                const ring = new THREE.Mesh(new THREE.RingGeometry(radius - 0.03, radius, 24), waveMat);
+                ring.position.set(pos[0], 0.4 + i*0.1, pos[1]);
+                ring.rotation.x = -Math.PI/2;
+                ring.scale.set(1, 1, 1);
+                waveGroup.add(ring);
+                waveRings.push({
+                    mesh: ring,
+                    baseRadius: radius,
+                    phase: i * 1.2,
+                    speed: 0.5 + Math.random()*0.5,
+                    pos: pos
+                });
+            }
+        });
+        scene.add(waveGroup);
+
+        // 额外声波环在建筑周围 (表示声学探索)
+        const extraWaveMat = new THREE.MeshBasicMaterial({
+            color: 0x66ccff,
+            transparent: true,
+            opacity: 0.15,
+            side: THREE.DoubleSide
+        });
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const radius = 3.0 + Math.sin(i*1.5)*0.5;
+            const x = Math.cos(angle) * radius;
+            const z = Math.sin(angle) * radius;
+            const ring = new THREE.Mesh(new THREE.RingGeometry(0.8, 1.0, 24), extraWaveMat);
+            ring.position.set(x, 0.3, z);
+            ring.rotation.x = -Math.PI/2;
+            waveGroup.add(ring);
+            waveRings.push({
+                mesh: ring,
+                baseRadius: 0.9,
+                phase: i * 0.8,
+                speed: 0.3 + Math.random()*0.3,
+                pos: {x: x, z: z}
+            });
+        }
+
+        // --- 添加标签 (CSS2D) ---
+
+        // 竹楼标签
+        const labelRoof = createLabel('🏠 傣族竹楼 (榫卯结构)', '#fff', 'rgba(109,76,42,0.8)', 'label-highlight');
+        labelRoof.position.set(0, 5.2, 0);
+        scene.add(labelRoof);
+
+        const labelMortise = createLabel('🔩 榫卯连接', '#fff', 'rgba(184,124,75,0.9)');
+        labelMortise.position.set(0, 3.0, 1.8);
+        scene.add(labelMortise);
+
+        const labelWave = createLabel('🌊 声波可视化', '#fff', 'rgba(102,204,255,0.8)');
+        labelWave.position.set(2.5, 1.5, 3.5);
+        scene.add(labelWave);
+
+        // 科学教育标签
+        const labelScience = createLabel('🔬 科学探索：声音的传播与结构力学', '#fff', 'rgba(0,0,0,0.7)');
+        labelScience.position.set(-2.8, 4.0, -3.5);
+        scene.add(labelScience);
+
+        // --- 动画循环 ---
+        let clock = new THREE.Clock();
+
+        function animate() {
+            const delta = clock.getDelta();
+            const elapsedTime = performance.now() / 1000;
+
+            // 更新声波环 (缩放)
+            waveRings.forEach(item => {
+                const scale = 1 + 0.4 * Math.sin(elapsedTime * item.speed + item.phase);
+                item.mesh.scale.set(scale, scale, 1);
+                // 透明度变化
+                if (item.mesh.material) {
+                    if (Array.isArray(item.mesh.material)) {
+                        item.mesh.material.forEach(mat => mat.opacity = 0.15 + 0.15 * Math.sin(elapsedTime * item.speed + item.phase));
+                    } else {
+                        item.mesh.material.opacity = 0.15 + 0.15 * Math.sin(elapsedTime * item.speed + item.phase);
+                    }
+                }
+            });
+
+            // 更新控制器
+            controls.update();
+
+            // 渲染
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+
+        // --- 窗口大小自适应 ---
+        window.addEventListener('resize', onWindowResize, false);
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // 提示用户操作
+        console.log('3D场景已加载，点击画面可暂停/恢复自动旋转。');
+    </script>
+</body>
+</html>

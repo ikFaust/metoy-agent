@@ -14,6 +14,7 @@ from edutoy.agent import EduToyAgent
 ROOT = Path(__file__).parent
 INDEX_PATH = ROOT / "data" / "edutoy" / "documents.jsonl"
 STORE_PATH = ROOT / "deepseek_html_20260620_f1cabf.html"
+STORE_STATIC_URL = "/app/static/store/%E5%95%86%E5%9F%8E.html"
 
 st.set_page_config(page_title="Metoy 科学小导师", page_icon="ET", layout="wide", initial_sidebar_state="expanded")
 
@@ -883,10 +884,10 @@ def render_store() -> None:
         </div>
         """
     )
-    if not STORE_PATH.exists():
+    if not (ROOT / "static" / "store" / "商城.html").exists():
         st.error("没有找到商店网页文件。")
         return
-    components.html(STORE_PATH.read_text(encoding="utf-8"), height=760, scrolling=True)
+    components.iframe(STORE_STATIC_URL, height=760, scrolling=True)
 
 
 init_sessions()

@@ -13,6 +13,7 @@ COPY data ./data
 COPY docs ./docs
 COPY edutoy ./edutoy
 COPY futuremajor ./futuremajor
+COPY static ./static
 COPY .streamlit ./.streamlit
 
 EXPOSE 8501

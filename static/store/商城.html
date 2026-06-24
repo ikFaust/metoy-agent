@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metoy —— STEAM科学益智玩具与社区</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #00C9A7;
+            --primary-dark: #00B398;
+            --secondary-color: #FFB800;
+            --bg-light: #F4F7FC;
+            --text-dark: #1e1e1e;
+            --text-gray: #666;
+            --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.05);
+            --radius: 16px;
+            --teacher-blue: #4A90E2;
+            --parent-pink: #FF8A80;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; color: var(--text-dark); background-color: #FFFFFF; line-height: 1.6; }
+        a { text-decoration: none; color: inherit; cursor: pointer; }
+        ul { list-style: none; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+
+        /* --- 头部导航 --- */
+        header { background-color: #FFFFFF; padding: 15px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.03); position: sticky; top: 0; z-index: 100; }
+        .header-content { display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 24px; font-weight: 800; color: var(--primary-color); display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .logo span { color: #333; font-weight: 400; }
+        .nav-links { display: flex; gap: 25px; font-size: 15px; font-weight: 500; }
+        .nav-links li { cursor: pointer; transition: 0.3s; }
+        .nav-links li:hover { color: var(--primary-color); }
+        .nav-links li.active { color: var(--primary-color); font-weight: 700; border-bottom: 2px solid var(--primary-color); padding-bottom: 4px; }
+        .header-tools { display: flex; align-items: center; gap: 15px; }
+        .search-bar { background: #f0f2f5; padding: 8px 15px; border-radius: 30px; display: flex; align-items: center; gap: 10px; }
+        .search-bar input { border: none; background: transparent; outline: none; font-size: 14px; width: 120px; }
+        .cart-icon { position: relative; font-size: 20px; cursor: pointer; }
+        .cart-badge { position: absolute; top: -5px; right: -8px; background: var(--secondary-color); color: white; font-size: 10px; padding: 2px 6px; border-radius: 50%; }
+
+        /* --- 核心切换控制 --- */
+        .content-section { display: none; animation: fadeIn 0.5s ease; }
+        .content-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+        .module-title { text-align: center; font-size: 28px; font-weight: 700; margin: 40px 0 30px; position: relative; }
+        .module-title:after { content: ''; width: 60px; height: 4px; background: var(--primary-color); position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); border-radius: 4px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; }
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px; }
+
+        /* ============================================================ */
+        /* 1. 首页（精简为品牌入口） */
+        /* ============================================================ */
+        .hero { background: linear-gradient(135deg, #E0F7F4 0%, #ffffff 100%); padding: 60px 0; text-align: center; border-radius: 0 0 50px 50px; margin-bottom: 20px; }
+        .hero h1 { font-size: 36px; font-weight: 700; margin-bottom: 10px; }
+        .hero p { font-size: 16px; color: var(--text-gray); margin-bottom: 30px; }
+        .hero-banner-img { max-width: 400px; width: 100%; border-radius: var(--radius); box-shadow: var(--shadow-card); margin-bottom: 30px; }
+        .hero-btn-group { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
+        .hero-btn { display: inline-block; background: var(--primary-color); color: white; padding: 12px 35px; border-radius: 30px; font-weight: 600; transition: 0.3s; }
+        .hero-btn-outline { background: transparent; border: 2px solid var(--primary-color); color: var(--primary-color); }
+        .hero-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,201,167,0.3); }
+
+        .home-features { padding: 40px 0; }
+        .home-features-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+        .hf-card { text-align: center; padding: 20px; border-radius: var(--radius); background: white; border: 1px solid #eee; cursor: pointer; transition: 0.3s; }
+        .hf-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-card); }
+        .hf-card h4 { font-size: 16px; margin-top: 10px; }
+
+        /* ============================================================ */
+        /* 2. 创新区 */
+        /* ============================================================ */
+        #innovation-zone { padding: 40px 0 80px; }
+        .innovation-header { text-align: center; margin-bottom: 30px; }
+        .innovation-header h2 { font-size: 32px; font-weight: 700; background: linear-gradient(135deg, #00C9A7, #FFB800); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .inno-card { background: white; border-radius: var(--radius); padding: 25px; transition: 0.3s; border: 1px solid #eee; position: relative; overflow: hidden; }
+        .inno-card:hover { transform: translateY(-8px); box-shadow: 0 15px 30px rgba(0,0,0,0.08); }
+        .inno-tag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 15px; background: white; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+        .inno-card h3 { font-size: 18px; margin-bottom: 10px; }
+        .inno-card p { font-size: 14px; color: #666; line-height: 1.6; margin-bottom: 15px; }
+        .inno-author { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #888; margin-top: 15px; border-top: 1px dashed #ddd; padding-top: 15px; }
+        .inno-image { width: 100%; border-radius: 8px; margin-bottom: 15px; object-fit: cover; }
+
+        /* ============================================================ */
+        /* 3. 讨论区 */
+        /* ============================================================ */
+        #discussion-section { padding: 40px 0 80px; background: #fcfcfc; }
+        .discuss-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; }
+        .discuss-header h2 { font-size: 28px; font-weight: 700; }
+        .role-switch { display: flex; gap: 12px; margin-top: 10px; }
+        .role-btn { padding: 6px 18px; border-radius: 20px; border: 1px solid #ddd; background: white; cursor: pointer; font-weight: 600; transition: 0.3s; font-size: 14px; }
+        .role-btn.active-parent { background: #ffe6e6; border-color: var(--parent-pink); color: #d9534f; }
+        .role-btn.active-teacher { background: #e6f0ff; border-color: var(--teacher-blue); color: var(--teacher-blue); }
+        .discuss-filters { display: flex; gap: 15px; margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px; flex-wrap: wrap; }
+        .discuss-filters .filter-tag { font-size: 14px; cursor: pointer; padding: 5px 15px; border-radius: 20px; background: #eee; transition: 0.3s; }
+        .discuss-filters .filter-tag.active { background: var(--primary-color); color: white; }
+        .discuss-list { background: white; border-radius: var(--radius); box-shadow: 0 2px 10px rgba(0,0,0,0.03); overflow: hidden; min-height: 150px; }
+        .discuss-item { display: flex; align-items: center; padding: 20px 25px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: 0.2s; }
+        .discuss-item:hover { background: #fafafa; }
+        .discuss-item.teacher { border-left: 5px solid var(--teacher-blue); }
+        .discuss-item.parent { border-left: 5px solid var(--parent-pink); }
+        .d-avatar { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; margin-right: 20px; flex-shrink: 0; }
+        .d-content { flex: 1; }
+        .d-role-badge { font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600; display: inline-block; margin-bottom: 4px; margin-right: 5px;}
+        .badge-teacher { background: #e6f0ff; color: var(--teacher-blue); }
+        .badge-parent { background: #ffe6e6; color: #d9534f; }
+        .d-content h4 { font-size: 16px; margin-bottom: 5px; font-weight: 600; }
+        .d-content .d-excerpt { font-size: 13px; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .d-tags { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+        .d-tag { background: #f0fdfb; color: var(--primary-color); font-size: 11px; padding: 2px 10px; border-radius: 12px; font-weight: 600; }
+        .d-meta { text-align: right; display: flex; flex-direction: column; justify-content: center; min-width: 60px; margin-left: 20px; flex-shrink: 0; }
+        .d-meta span { font-size: 12px; color: #999; }
+
+        /* ============================================================ */
+        /* 4. 综合商店 */
+        /* ============================================================ */
+        #shop-section { background: #f9fbfc; padding-bottom: 80px; }
+        .shop-hero { background: #fff; padding: 30px 0; text-align: center; border-bottom: 1px solid #eee; }
+        .shop-hero h1 { font-size: 28px; font-weight: 700; color: var(--text-dark); }
+        .shop-hero p { color: var(--text-gray); margin-top: 5px; }
+
+        .shop-link-wrap { text-align: center; background: #fff; padding: 40px 20px; border-radius: var(--radius); box-shadow: var(--shadow-card); margin-bottom: 40px; }
+        .shop-link-btn { background: var(--primary-color); color: white; padding: 12px 35px; border-radius: 30px; font-weight: 600; transition: 0.3s; display: inline-block; margin-top: 10px;}
+        .shop-link-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,201,167,0.3); }
+
+        .guide-wrap { background: #fff; padding: 30px; border-radius: var(--radius); box-shadow: var(--shadow-card); height: 100%; }
+        .guide-wrap h3 { font-size: 20px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .step-item { display: flex; gap: 15px; margin-bottom: 15px; align-items: flex-start; }
+        .step-num { width: 28px; height: 28px; background: #f0fdfb; color: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+        .step-item p { font-size: 14px; color: #555; }
+        .dl-btn { display: inline-block; background: #f0f2f5; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.3s; margin-top: 5px; }
+        .dl-btn:hover { background: var(--primary-color); color: white; }
+
+        .video-wrap { background: #fff; border-radius: var(--radius); box-shadow: var(--shadow-card); overflow: hidden; margin-bottom: 40px; }
+        .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; background: #1e1e1e; }
+        .video-container iframe, .video-container video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+        .video-poster { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #222; display: flex; align-items: center; justify-content: center; flex-direction: column; color: white; }
+        .play-icon { width: 80px; height: 80px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; backdrop-filter: blur(4px); border: 2px solid rgba(255,255,255,0.4); margin-bottom: 15px; cursor: pointer; transition: 0.3s; }
+        .play-icon:hover { background: rgba(255,255,255,0.4); transform: scale(1.1); }
+
+        .recycle-wrap { background: linear-gradient(135deg, #e6f7f0, #d1f2eb); padding: 30px; border-radius: var(--radius); margin-top: 40px; }
+        .recycle-wrap h3 { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 700; color: #1e1e1e; }
+        .steps-flow { display: flex; justify-content: space-around; margin: 20px 0 30px; text-align: center; flex-wrap: wrap; }
+        .step-flow-item { flex: 1; min-width: 120px; padding: 10px; }
+        .step-flow-num { width: 40px; height: 40px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; font-weight: 700; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .recycle-cards { display: flex; gap: 20px; flex-wrap: wrap; }
+        .recycle-card { background: white; border-radius: var(--radius); padding: 20px; flex: 1; min-width: 200px; border-left: 4px solid var(--primary-color); }
+        .recycle-card strong { display: block; font-size: 16px; margin-bottom: 5px; }
+        .recycle-card p { font-size: 13px; color: #666; }
+        .recycle-card .btn { margin-top: 10px; background: #1e1e1e; color: white; padding: 6px 20px; border-radius: 20px; font-size: 12px; border: none; cursor: pointer; }
+
+        /* ============================================================ */
+        /* 5. 新品专区（全新独立窗口/展示厅） */
+        /* ============================================================ */
+        #new-section { background: #fdfdfd; padding: 40px 0 80px; }
+        .new-hero { text-align: center; margin-bottom: 40px; }
+        .new-hero h2 { font-size: 36px; font-weight: 700; margin-bottom: 10px; }
+        .new-hero p { color: var(--text-gray); font-size: 16px; }
+
+        .new-exhibit-wrap { background: #fff; padding: 40px; border-radius: var(--radius); box-shadow: var(--shadow-card); max-width: 1200px; margin: 0 auto; }
+        .new-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; }
+        
+        .new-item-card { background: #fafafa; border-radius: var(--radius); overflow: hidden; border: 1px solid #eee; transition: 0.3s; }
+        .new-item-card:hover { transform: translateY(-8px); box-shadow: 0 15px 30px rgba(0,0,0,0.08); }
+        
+        .new-item-viewport { position: relative; width: 100%; height: 380px; overflow: hidden; background: white; }
+        .new-item-viewport iframe { width: 100%; height: 100%; border: none; }
+        .new-item-badge { position: absolute; top: 20px; right: 20px; background: #ff4757; color: white; font-size: 12px; font-weight: 700; padding: 6px 16px; border-radius: 20px; z-index: 10; box-shadow: 0 2px 10px rgba(255,71,87,0.4); }
+        
+        .new-item-content { padding: 25px 30px; background: white; border-top: 2px solid var(--primary-color); }
+        .new-item-content h3 { font-size: 20px; font-weight: 700; margin-bottom: 8px; color: var(--text-dark); }
+        .new-item-content p { font-size: 15px; color: var(--text-gray); line-height: 1.5; }
+        .new-item-actions { margin-top: 15px; display: flex; gap: 12px; }
+        .new-btn-primary { background: var(--primary-color); color: white; padding: 8px 24px; border-radius: 30px; border: none; cursor: pointer; font-weight: 600; transition: 0.3s; }
+        .new-btn-primary:hover { background: var(--primary-dark); }
+        .new-btn-outline { background: transparent; border: 1px solid #ddd; padding: 8px 24px; border-radius: 30px; cursor: pointer; font-weight: 600; transition: 0.3s; }
+        .new-btn-outline:hover { background: #f0f0f0; }
+
+        /* --- 底部与 AI 及响应式 --- */
+        .app-download { padding: 40px 0 80px; }
+        .app-box { background: #1e1e1e; border-radius: 20px; padding: 40px; display: flex; justify-content: space-between; align-items: center; color: white; }
+        .store-badges { display: flex; gap: 15px; margin-top: 15px; }
+        .store-btn { background: #333; padding: 10px 20px; border-radius: 8px; display: flex; align-items: center; gap: 10px; border: 1px solid #444; cursor: pointer; transition: 0.3s; }
+        .store-btn:hover { background: #444; }
+
+        footer { background: #F8FAFB; border-top: 1px solid #eee; padding: 60px 0 30px; }
+        .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 40px; }
+        .footer-col ul li { margin-bottom: 12px; color: var(--text-gray); font-size: 14px; cursor: pointer; transition: 0.3s; }
+        .footer-col ul li:hover { color: var(--primary-color); }
+        .newsletter { display: flex; gap: 10px; margin-top: 10px; }
+        .newsletter input { flex: 1; padding: 10px 15px; border: 1px solid #ddd; border-radius: 8px; outline: none; }
+        .newsletter button { padding: 10px 20px; background: var(--primary-color); color: white; border: none; border-radius: 8px; cursor: pointer; }
+
+        .ai-float-btn { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: linear-gradient(135deg, var(--primary-color), #00e1b0); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; color: white; cursor: pointer; box-shadow: 0 4px 15px rgba(0, 201, 167, 0.4); z-index: 999; transition: 0.3s; animation: floatUp 2s infinite ease-in-out; }
+        .ai-float-btn:hover { transform: scale(1.1); }
+        @keyframes floatUp { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+        .ai-chat-container { position: fixed; bottom: 100px; right: 30px; width: 360px; height: 480px; background: #ffffff; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); display: none; flex-direction: column; overflow: hidden; z-index: 1000; border: 1px solid #eee;}
+        .ai-chat-container.active { display: flex; }
+        .chat-header { background: var(--primary-color); padding: 15px 20px; color: white; display: flex; justify-content: space-between; align-items: center; }
+        .chat-close-btn { background: transparent; border: none; color: white; font-size: 18px; cursor: pointer; }
+        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: #f8fafb; }
+        .msg { max-width: 80%; padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.5; }
+        .msg-ai { align-self: flex-start; background: #ffffff; border: 1px solid #eee; color: #333; border-bottom-left-radius: 4px; }
+        .msg-user { align-self: flex-end; background: var(--primary-color); color: white; border-bottom-right-radius: 4px; }
+        .chat-input-area { padding: 15px; background: white; border-top: 1px solid #f0f0f0; display: flex; gap: 10px; }
+        .chat-input-area textarea { flex: 1; padding: 10px 15px; border: 1px solid #e0e0e0; border-radius: 20px; outline: none; resize: none; height: 44px; font-family: inherit; font-size: 14px; }
+        .chat-send-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--primary-color); color: white; border: none; cursor: pointer; transition: 0.3s;}
+
+        @media (max-width: 992px) { .grid-3 { grid-template-columns: repeat(2, 1fr); } .grid-2 { grid-template-columns: 1fr; } .new-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { 
+            .nav-links { gap: 10px; font-size: 13px; } 
+            .home-features-grid { grid-template-columns: 1fr 1fr; } .grid-3 { grid-template-columns: 1fr; } 
+            .footer-grid { grid-template-columns: 1fr; } .d-meta { flex-direction: row; gap: 10px; min-width: unset; justify-content: flex-start; } 
+            .discuss-item { flex-direction: column; align-items: flex-start; gap: 10px; } 
+            .steps-flow { flex-direction: column; gap: 20px; }
+            .ai-chat-container { width: 90%; right: 5%; bottom: 80px; height: 400px; }
+            .new-item-viewport { height: 280px; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container header-content">
+            <a class="logo" onclick="switchTab('home')">Metoy<span>®</span></a>
+            <ul class="nav-links">
+                <li class="active" onclick="switchTab('home')">首页</li>
+                <li onclick="switchTab('new')">🆕 新品专区</li>
+                <li onclick="switchTab('innovation')">创新区</li>
+                <li onclick="switchTab('discussion')">讨论区</li>
+                <li onclick="switchTab('shop')">商店</li>
+            </ul>
+            <div class="header-tools">
+                <div class="search-bar"><span>🔍</span><input type="text" placeholder="搜一搜..."></div>
+                <div class="cart-icon">🛒<span class="cart-badge">3</span></div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- ===================== 首页 ===================== -->
+        <div id="home-section" class="content-section active">
+            <section class="hero">
+                <div class="container">
+                    <h1>激发无限创造力</h1>
+                    <p>专为儿童设计的 STEAM 科学益智玩具，融合家庭与教师双社群</p>
+                    <img src="动画设计图1.png" alt="Metoy Banner" class="hero-banner-img">
+                    <div class="hero-btn-group">
+                        <a class="hero-btn" onclick="switchTab('new')">🆕 探索新品专区</a>
+                        <a class="hero-btn hero-btn-outline" onclick="switchTab('discussion')">💬 去看看社区</a>
+                    </div>
+                </div>
+            </section>
+            <section class="home-features container">
+                <div class="home-features-grid">
+                    <div class="hf-card" onclick="switchTab('new')"><span style="font-size:36px;">🆕</span><h4>新品上市</h4><p style="color:#666;font-size:13px;">查看最新民族文化智慧玩具</p></div>
+                    <div class="hf-card" onclick="switchTab('shop')"><span style="font-size:36px;">📚</span><h4>配套课程</h4><p style="color:#666;font-size:13px;">学校与家庭双重教学指南</p></div>
+                    <div class="hf-card" onclick="switchTab('shop')"><span style="font-size:36px;">📹</span><h4>视频演示</h4><p style="color:#666;font-size:13px;">一学就会的组装教学</p></div>
+                    <div class="hf-card" onclick="switchTab('shop')"><span style="font-size:36px;">♻️</span><h4>以旧换新</h4><p style="color:#666;font-size:13px;">旧玩具回收置换计划</p></div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ===================== 新品专区 (独立页面) ===================== -->
+        <div id="new-section" class="content-section">
+            <section class="container">
+                <div class="new-hero">
+                    <h2>🆕 独立新品展示厅</h2>
+                    <p>汇聚前沿科技与传统文化的创新玩具，点击即可交互旋转探索</p>
+                </div>
+                
+                <div class="new-exhibit-wrap">
+                    <div class="new-grid">
+                        <!-- 新品 1 -->
+                        <div class="new-item-card">
+                            <div class="new-item-viewport">
+                                <span class="new-item-badge">🔥 热推</span>
+                                <iframe src="彝历漆盘·星斗棋.html"></iframe>
+                            </div>
+                            <div class="new-item-content">
+                                <h3>彝历漆盘 · 星斗棋</h3>
+                                <p>彝族漆器艺术 × 十月太阳历 · 融合数学策略与文化认知的交互积木</p>
+                                <div class="new-item-actions">
+                                    <button class="new-btn-primary" onclick="alert('即将加入探索列表')">探索体验</button>
+                                    <button class="new-btn-outline" onclick="alert('查看课程配套')">查看教案</button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 新品 2 -->
+                        <div class="new-item-card">
+                            <div class="new-item-viewport">
+                                <span class="new-item-badge">✨ 科学</span>
+                                <iframe src="傣族竹楼榫卯积木+声学探索.html"></iframe>
+                            </div>
+                            <div class="new-item-content">
+                                <h3>傣族竹楼 · 榫卯积木</h3>
+                                <p>融合云南傣族竹楼建造技艺与声学探索奥秘的物理科学教具</p>
+                                <div class="new-item-actions">
+                                    <button class="new-btn-primary" onclick="alert('即将加入探索列表')">探索体验</button>
+                                    <button class="new-btn-outline" onclick="alert('查看课程配套')">查看教案</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ===================== 创新区 ===================== -->
+        <div id="innovation-section" class="content-section">
+            <section class="container">
+                <div class="innovation-header"><h2>🚀 创新实验室</h2><p style="color: #666; margin-top: 10px;">汇集小发明家与老师的奇思妙想</p></div>
+                <div class="grid-3">
+                    <div class="inno-card">
+                        <div class="inno-tag" style="color:#00C9A7;">💡 新创意</div>
+                        <h3>利用静电驱动小飞机</h3>
+                        <p>通过摩擦气球产生静电，让纸片做的小飞机在空中悬浮并旋转。</p>
+                        <div class="inno-author"><span>👤 小博</span> <span>· 1天前</span></div>
+                    </div>
+                    <div class="inno-card">
+                        <div class="inno-tag" style="color:#FFB800;">⭐ 精华</div>
+                        <h3>自制彩虹光学显微镜</h3>
+                        <p>利用废弃塑料瓶和透镜，结合手机闪光灯，教孩子观察细胞实验。</p>
+                        <div class="inno-author"><span>👤 米娅妈妈</span> <span>· 3天前</span></div>
+                    </div>
+                    <div class="inno-card">
+                        <div class="inno-tag" style="color:#a855f7;">🔥 热门</div>
+                        <h3>非牛顿流体 "史莱姆" 实验</h3>
+                        <p>玉米淀粉和水的混合物，遇强则强，是讲解流体力学最生动的材料。</p>
+                        <div class="inno-author"><span>👤 阿睿</span> <span>· 5天前</span></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ===================== 讨论区 ===================== -->
+        <div id="discussion-section" class="content-section">
+            <section class="container">
+                <div class="discuss-header">
+                    <div>
+                        <h2 id="discussTitle">💬 综合教育交流圈</h2>
+                        <div class="role-switch">
+                            <span style="font-size:14px; color:#888; font-weight:500;">身份：</span>
+                            <span class="role-btn active-parent" id="roleParentBtn" onclick="switchRole('parent')">👪 家长</span>
+                            <span class="role-btn" id="roleTeacherBtn" onclick="switchRole('teacher')">👨‍🏫 教师</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="discuss-filters" id="filterContainer"><span class="filter-tag active">全部</span></div>
+                <div class="discuss-list" id="discussList"><div class="discuss-list-empty">加载帖子中...</div></div>
+            </section>
+        </div>
+
+        <!-- ===================== 综合商店 ===================== -->
+        <div id="shop-section" class="content-section">
+            <div class="container">
+                <div class="shop-hero">
+                    <h1>🏪 Metoy 综合服务商店</h1>
+                    <p>选购最新玩具，获取配套教学资源，查看使用指南与旧物置换</p>
+                </div>
+
+                <!-- 引导条：指向新品专区 -->
+                <div class="shop-link-wrap">
+                    <h3 style="font-weight: 600; font-size: 22px; margin-bottom: 10px;">🎁 最新民族智慧玩具已上线！</h3>
+                    <p style="color: #666; margin-bottom: 15px;">彝历漆盘与傣族竹楼积木正在独立新品展示厅展出。</p>
+                    <span class="shop-link-btn" onclick="switchTab('new')">🆕 前往独立新品专区查看 >></span>
+                </div>
+
+                <!-- 模块 2 & 3：课程配套与家庭指南 -->
+                <h2 class="module-title">📘 教学与使用指南</h2>
+                <div class="grid-2">
+                    <div class="guide-wrap">
+                        <h3>🏫 课程配套说明</h3>
+                        <div class="step-item"><div class="step-num">1</div><p><strong>小学科学课标套件</strong><br><span style="color:#888;font-size:13px;">专门为 3-6 年级设计的物理与化学实验包。</span><br><span class="dl-btn">📥 下载教学大纲</span></p></div>
+                        <div class="step-item"><div class="step-num">2</div><p><strong>幼儿园启智套件</strong><br><span style="color:#888;font-size:13px;">以颜色、形状与基础逻辑为核心的入门积木。</span><br><span class="dl-btn">📥 下载活动教案</span></p></div>
+                        <div class="step-item"><div class="step-num">3</div><p><strong>机器人编程进阶</strong><br><span style="color:#888;font-size:13px;">配合 Scratch 图形化编程指导手册。</span><br><span class="dl-btn">📥 获取代码示例</span></p></div>
+                    </div>
+                    <div class="guide-wrap">
+                        <h3>🏠 家庭使用说明</h3>
+                        <div class="step-item"><div class="step-num">①</div><p><strong>开箱与安全提示</strong><br>包含细小零件，3岁以下儿童需在成人监护下使用。</p></div>
+                        <div class="step-item"><div class="step-num">②</div><p><strong>组装步骤指引</strong><br>配合详细纸质书与 QR Code 扫码看视频搭建。</p></div>
+                        <div class="step-item"><div class="step-num">③</div><p><strong>养护与清洁须知</strong><br>使用干布擦拭，避免电子模块接触水源。</p></div>
+                    </div>
+                </div>
+
+                <!-- 模块 4：视频演示 -->
+                <h2 class="module-title">📹 视频演示中心</h2>
+                <div class="video-wrap">
+                    <div class="video-container">
+                        <video controls preload="metadata" poster="动画设计图1.png">
+                            <source src="宣传视频.MP4" type="video/mp4">
+                            您的浏览器不支持视频播放，请直接打开“宣传视频.MP4”。
+                        </video>
+                    </div>
+                </div>
+
+                <!-- 模块 5：旧产品回收置换 -->
+                <h2 class="module-title">♻️ 绿色未来 · 旧物置换计划</h2>
+                <div class="recycle-wrap">
+                    <h3>♻️ 玩具回收与以旧换新</h3>
+                    <div class="steps-flow">
+                        <div class="step-flow-item"><div class="step-flow-num">1</div><p>线上提交<br><span style="font-size:12px;color:#666;">填写旧玩具信息</span></p></div>
+                        <div class="step-flow-item"><div class="step-flow-num">2</div><p>物流回收<br><span style="font-size:12px;color:#666;">免费上门取件</span></p></div>
+                        <div class="step-flow-item"><div class="step-flow-num">3</div><p>换取积分/优惠<br><span style="font-size:12px;color:#666;">抵现购买新款</span></p></div>
+                    </div>
+                    <div class="recycle-cards">
+                        <div class="recycle-card"><strong>基础回收计划</strong><p>将积灰旧玩具捐赠给乡村学校，得 20 积分。</p><button class="btn" onclick="alert('请进入旧物回收申请页面')">申请回收</button></div>
+                        <div class="recycle-card" style="border-left-color:var(--secondary-color);"><strong>⭐ 以旧换新特权</strong><p>寄回 2 件旧玩具，购买新品可享 8 折优惠。</p><button class="btn" onclick="alert('请进入以旧换新申请页面')">立即换购</button></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- App 下载 -->
+        <section class="app-download container">
+            <div class="app-box">
+                <div><h3>下载 Metoy App</h3><p style="color:#aaa;">与全球家庭、教师一起交流科学</p>
+                    <div class="store-badges"><div class="store-btn"><span>Download on</span><br><strong>App Store</strong></div><div class="store-btn"><span>Get it on</span><br><strong>Google Play</strong></div></div>
+                </div>
+                <div><h3>📧 上新通知</h3><div class="newsletter"><input type="email" placeholder="输入您的邮箱"><button>订阅</button></div><p style="color:#aaa;font-size:12px;margin-top:10px;">不发送垃圾邮件</p></div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div><h4 style="color:var(--primary-color);">Metoy</h4><p style="color:#666;font-size:14px;">致力于提供STEAM产品与服务</p></div>
+                <div><h4>关于我们</h4><ul><li>品牌故事</li><li>我们的使命</li></ul></div>
+                <div><h4>客户服务</h4><ul><li>帮助中心</li><li>退换货政策</li></ul></div>
+                <div><h4>联系我们</h4><ul><li>📞 17787256945</li><li>📧 3585363762@qq.com</li></ul></div>
+            </div>
+            <div class="copyright">© 2026 Metoy. All Rights Reserved.</div>
+        </div>
+    </footer>
+
+    <!-- AI 智能体 -->
+    <div class="ai-float-btn" id="aiToggleBtn">🤖</div>
+    <div class="ai-chat-container" id="aiChatContainer">
+        <div class="chat-header"><h4>🤖 Metoy AI 助手</h4><button class="chat-close-btn" id="aiCloseBtn">✕</button></div>
+        <div class="chat-messages" id="chatMessages"><div class="msg msg-ai">👋 你好！我可以帮你找产品、查指南，或解答社区问题。试试问我“新品是什么”或“怎么回收”。</div></div>
+        <div class="chat-input-area"><textarea id="chatInput" placeholder="输入问题..." rows="1"></textarea><button class="chat-send-btn" id="chatSendBtn">➤</button></div>
+    </div>
+
+    <script>
+        // ========== 1. 页面切换 ==========
+        function switchTab(tab) {
+            document.querySelectorAll('.content-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-links li').forEach(el => el.classList.remove('active'));
+            if(tab === 'home') { document.getElementById('home-section').classList.add('active'); document.querySelector('.nav-links li:nth-child(1)').classList.add('active'); }
+            else if(tab === 'new') { document.getElementById('new-section').classList.add('active'); document.querySelector('.nav-links li:nth-child(2)').classList.add('active'); }
+            else if(tab === 'innovation') { document.getElementById('innovation-section').classList.add('active'); document.querySelector('.nav-links li:nth-child(3)').classList.add('active'); }
+            else if(tab === 'discussion') { document.getElementById('discussion-section').classList.add('active'); document.querySelector('.nav-links li:nth-child(4)').classList.add('active'); renderDiscussions(); }
+            else if(tab === 'shop') { document.getElementById('shop-section').classList.add('active'); document.querySelector('.nav-links li:nth-child(5)').classList.add('active'); }
+        }
+
+        // ========== 2. 讨论区数据与模块化渲染 ==========
+        const discussionPosts = [
+            { id: 1, role: 'teacher', author: '李老师', avatarColor: '#4A90E2', title: '【教研】如何用“水车击鼓”上公开课？', excerpt: '准备在四年级上公开课，求同行分享经验...', tags: ['教案设计', '公开课'], replies: 24, time: '1h' },
+            { id: 2, role: 'parent', author: '兜兜妈', avatarColor: '#FF8A80', title: '【育儿】孩子6岁，对能量转换感兴趣，怎么引导？', excerpt: '去科技馆看了水车回来一直问，家里能做小实验吗？', tags: ['亲子互动', '育儿技巧'], replies: 8, time: '3h' },
+            { id: 3, role: 'teacher', author: '张老师', avatarColor: '#4A90E2', title: '【分享】机构举办“太阳能火星车”对抗赛', excerpt: '上周搞了个竞速赛，参与度极高，分享规则...', tags: ['课堂实践', '教具创新'], replies: 16, time: '昨天' },
+            { id: 4, role: 'parent', author: '火火爸', avatarColor: '#FF8A80', title: '【避坑】玩化学结晶套装需要注意什么？', excerpt: '怕弄脏家里，求过来人提醒细节。', tags: ['经验分享', '安全须知'], replies: 5, time: '2天前' }
+        ];
+        let currentRole = 'all', currentTag = '全部';
+        function getUniqueTags() { let tags = new Set(); discussionPosts.forEach(p => p.tags.forEach(t => tags.add(t))); return ['全部', ...tags]; }
+        function renderDiscussions() {
+            const list = document.getElementById('discussList');
+            const filterDiv = document.getElementById('filterContainer');
+            filterDiv.innerHTML = '';
+            getUniqueTags().forEach(tag => {
+                const el = document.createElement('span');
+                el.className = 'filter-tag' + (tag === currentTag ? ' active' : '');
+                el.innerText = tag;
+                el.onclick = () => { currentTag = tag; renderDiscussions(); };
+                filterDiv.appendChild(el);
+            });
+            let filtered = discussionPosts.filter(p => currentRole === 'all' || p.role === currentRole);
+            if (currentTag !== '全部') filtered = filtered.filter(p => p.tags.includes(currentTag));
+            list.innerHTML = '';
+            if (!filtered.length) { list.innerHTML = '<div class="discuss-list-empty">暂无帖子</div>'; return; }
+            filtered.forEach(p => {
+                list.innerHTML += `
+                    <div class="discuss-item ${p.role}">
+                        <div class="d-avatar" style="background:${p.avatarColor};">${p.author[0]}</div>
+                        <div class="d-content">
+                            <div><span class="d-role-badge ${p.role==='teacher'?'badge-teacher':'badge-parent'}">${p.role==='teacher'?'👨‍🏫 教师':'👪 家长'}</span></div>
+                            <h4>${p.title}</h4><p class="d-excerpt">${p.excerpt}</p>
+                            <div class="d-tags">${p.tags.map(t=>`<span class="d-tag">${t}</span>`).join('')}</div>
+                        </div>
+                        <div class="d-meta"><span>💬 ${p.replies}</span><span>${p.time}</span></div>
+                    </div>
+                `;
+            });
+        }
+        function switchRole(role) {
+            currentRole = role;
+            const pBtn = document.getElementById('roleParentBtn'), tBtn = document.getElementById('roleTeacherBtn');
+            pBtn.className = 'role-btn'; tBtn.className = 'role-btn';
+            if(role === 'parent') { pBtn.classList.add('active-parent'); document.getElementById('discussTitle').innerHTML = '💬 家长育儿交流圈'; } 
+            else { tBtn.classList.add('active-teacher'); document.getElementById('discussTitle').innerHTML = '💬 教师教研交流圈'; }
+            currentTag = '全部'; renderDiscussions();
+        }
+
+        // ========== 3. AI 交互与增强 ==========
+        const tBtn = document.getElementById('aiToggleBtn'), cContainer = document.getElementById('aiChatContainer'), cBtn = document.getElementById('aiCloseBtn');
+        tBtn.onclick = () => cContainer.classList.toggle('active'); cBtn.onclick = () => cContainer.classList.remove('active');
+        const sBtn = document.getElementById('chatSendBtn'), cInput = document.getElementById('chatInput'), cMessages = document.getElementById('chatMessages');
+        sBtn.onclick = sendMessage; cInput.onkeypress = (e) => { if (e.key === 'Enter') { e.preventDefault(); sendMessage(); } };
+        function sendMessage() {
+            const text = cInput.value.trim(); if (!text) return;
+            const userDiv = document.createElement('div'); userDiv.className = 'msg msg-user'; userDiv.innerText = text; cMessages.appendChild(userDiv); cInput.value = '';
+            const typingDiv = document.createElement('div'); typingDiv.className = 'msg msg-ai'; typingDiv.innerText = '思考中...'; cMessages.appendChild(typingDiv);
+            setTimeout(async () => {
+                typingDiv.remove();
+                const reply = await getAIResponse(text);
+                const aiDiv = document.createElement('div'); aiDiv.className = 'msg msg-ai'; aiDiv.innerText = reply; cMessages.appendChild(aiDiv);
+                cMessages.scrollTop = cMessages.scrollHeight;
+            }, 800);
+        }
+        async function getAIResponse(msg) {
+            const m = msg.toLowerCase();
+            if (m.includes('新品') || m.includes('星斗棋') || m.includes('竹楼')) { switchTab('new'); return "最新上市了两款融合民族文化的智能产品：彝历星斗棋和傣族竹楼积木。我已带您进入独立的新品展示厅，您可以直接在页面上交互旋转观看 3D 模型！"; }
+            else if (m.includes('课程') || m.includes('教学')) { switchTab('shop'); return "教学配套资料在商店中部的课程指南里，包含小学科学课标和Scratch编程示例，可直接下载。"; }
+            else if (m.includes('使用') || m.includes('组装')) { switchTab('shop'); return "家庭使用说明分为安全提示、组装步骤和养护须知，您可以在商店的指南区域查看。"; }
+            else if (m.includes('视频') || m.includes('演示')) { switchTab('shop'); return "商店中的视频演示区有‘水车击鼓’的完整组装教程，我帮您打开了，点击播放即可。"; }
+            else if (m.includes('回收') || m.includes('换购') || m.includes('置换')) { switchTab('shop'); return "旧产品回收分为基础回收（捐赠得积分）和以旧换新（2件旧品享8折）。在商店最下方找到绿色回收区申请。"; }
+            else if (m.includes('创新')) { switchTab('innovation'); return "这里有许多小发明家分享的DIY创意，如静电飞机、光学显微镜和史莱姆。"; }
+            else if (m.includes('讨论') || m.includes('老师')) { switchTab('discussion'); switchRole('teacher'); return "已切换至教师教研圈，有关于公开课和教具创新的帖子。"; }
+            return "您可以问我：'有什么新品？'、'怎么做以旧换新？'、'有没有视频教程？'、'老师们在讨论什么？'";
+        }
+    </script>
+</body>
+</html>

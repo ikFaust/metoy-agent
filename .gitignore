@@ -8,6 +8,7 @@ metoy-agent-code.zip
 
 # Local-only source materials. The deployed app uses the compact JSONL index in data/.
 新的设计/
+网页/
 从0构建大模型_大作业.pdf
 
 # Keep Streamlit deployment config, but ignore local secrets.
