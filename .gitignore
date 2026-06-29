@@ -11,5 +11,11 @@ metoy-agent-code.zip
 网页/
 从0构建大模型_大作业.pdf
 
+# Local submission/private report artifacts.
+docs/report.tex
+docs/report.pdf
+docs/assets/
+docs/external_eval_cases.md
+
 # Keep Streamlit deployment config, but ignore local secrets.
 .streamlit/secrets.toml

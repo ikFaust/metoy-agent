@@ -49,6 +49,7 @@ class EduToyResult:
     intent: str = "unknown"
     quality_checks: dict[str, Any] | None = None
     tool_summary: list[dict[str, str]] | None = None
+    trajectory: list[dict[str, Any]] | None = None
 
 
 class EduToyAgent:
@@ -129,6 +130,13 @@ class EduToyAgent:
                 intent=state.intent,
                 quality_checks=quality,
                 tool_summary=tools,
+                trajectory=self._build_trajectory(
+                    state,
+                    steps,
+                    catalog_docs,
+                    quality,
+                    {"intent": "catalog_query", "tools": ["list_teaching_aids"]},
+                ),
             )
 
         if state.intent == "clarify":
@@ -147,6 +155,7 @@ class EduToyAgent:
                 intent=state.intent,
                 quality_checks=quality,
                 tool_summary=tools,
+                trajectory=self._build_trajectory(state, steps, [], quality, {"intent": "clarify"}),
             )
 
         use_llm_plan = mode == "developer"
@@ -175,7 +184,8 @@ class EduToyAgent:
                     answer[:900],
                 )
             )
-            quality = self._quality_check(answer, docs, "", state, used_tools=["local_rag", "fast_template"] if fast_mode and mode == "student" else ["local_rag", "llm"])
+            concept_tools = ["local_rag", "fast_template"] if fast_mode and mode == "student" else ["local_rag", "llm" if self.llm.available else "rule_generator"]
+            quality = self._quality_check(answer, docs, "", state, used_tools=concept_tools)
             steps.append(EduStep("VerifyAnswer", "guardrail", "检查知识讲解是否先讲概念、是否引用本地资料、是否没有误入实验设计", self._compact_json(quality)))
             return EduToyResult(
                 answer=answer,
@@ -187,6 +197,7 @@ class EduToyAgent:
                 intent=state.intent,
                 quality_checks=quality,
                 tool_summary=tools,
+                trajectory=self._build_trajectory(state, steps, docs, quality, plan),
             )
 
         design_brief = self._design_brief(effective_message, level, constraints, docs)
@@ -203,7 +214,7 @@ class EduToyAgent:
             answer = self._synthesize(effective_message, level, mode, topic_hint, constraints, history, plan, docs, design_brief, safety)
             answer = answer or self._fallback_answer(effective_message, level, docs, design_brief, safety)
             response_kind = "llm" if self.llm.available else "rule"
-            used_tools = ["local_rag", "experiment_designer", "safety_checker", "llm"]
+            used_tools = ["local_rag", "experiment_designer", "safety_checker", "llm" if self.llm.available else "rule_generator"]
         steps.append(EduStep("Respond", response_kind, "面向学生或开发者生成最终回答", answer[:900]))
         quality = self._quality_check(answer, docs, safety, state, used_tools=used_tools)
         steps.append(EduStep("VerifyAnswer", "guardrail", "检查实验是否有安全边界、是否使用本地资料、是否没有把模型猜测当来源", self._compact_json(quality)))
@@ -218,7 +229,83 @@ class EduToyAgent:
             intent=state.intent,
             quality_checks=quality,
             tool_summary=tools,
+            trajectory=self._build_trajectory(state, steps, docs, quality, plan),
         )
+
+    @staticmethod
+    def _build_trajectory(
+        state: AgentState,
+        steps: list[EduStep],
+        docs: list[Document],
+        quality: dict[str, Any],
+        plan: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        step_names = {step.name for step in steps}
+        used_tools = quality.get("used_tools", [])
+        top_docs = [
+            {
+                "title": doc.title,
+                "category": doc.category,
+                "source": doc.path or doc.source,
+            }
+            for doc in docs[:5]
+        ]
+        planner = plan.get("planner") or ("llm_planner" if "Plan" in step_names and "llm" in {step.kind for step in steps if step.name == "Plan"} else "rule_planner")
+        generator = "GLM" if "llm" in used_tools else ("本地规则/模板" if used_tools else "无需生成模型")
+        failed_checks = [check.get("name", "未知检查") for check in quality.get("checks", []) if not check.get("pass")]
+
+        return [
+            {
+                "phase": "接收输入",
+                "kind": "state",
+                "status": "done",
+                "summary": f"收到用户问题：{state.message}",
+                "detail": f"学段={state.level}；模式={state.mode}；历史消息={len(state.history)} 条；知识点提示={state.topic_hint or '无'}。",
+            },
+            {
+                "phase": "上下文处理",
+                "kind": "memory",
+                "status": "done" if "ResolveContext" in step_names else "skipped",
+                "summary": "检查是否属于同一对话中的追问、指代或继续操作。",
+                "detail": "如果用户说“下一步”“这个”“怎么验证呢”，优先承接最近一轮上下文；本轮如无短追问则跳过。",
+            },
+            {
+                "phase": "意图路由",
+                "kind": "router",
+                "status": "done",
+                "summary": f"判断为 {state.intent}，采用路线 {state.route}。",
+                "detail": "路由决定本轮是查教具目录、解释知识点、继续实验设计，还是先追问澄清。",
+            },
+            {
+                "phase": "工具选择",
+                "kind": "toolbox",
+                "status": "done",
+                "summary": "选择本轮可调用工具：" + ("、".join(used_tools) if used_tools else "无工具，先追问澄清"),
+                "detail": "工具选择用于约束模型行为，避免教具清单、资料来源和安全边界被自由编造。",
+            },
+            {
+                "phase": "资料检索",
+                "kind": "rag",
+                "status": "done" if docs else "skipped",
+                "summary": f"本轮命中本地资料 {len(docs)} 条。",
+                "detail": "；".join(f"{doc['title']}（{doc['category']}）" for doc in top_docs) or "没有进入 RAG，或本轮属于澄清问题。",
+                "evidence": top_docs,
+            },
+            {
+                "phase": "生成回答",
+                "kind": "generator",
+                "status": "done",
+                "summary": f"使用 {generator} 生成最终回复。",
+                "detail": f"规划器={planner}；回答会根据意图区分知识讲解、教具目录或实验步骤。",
+            },
+            {
+                "phase": "质量校验",
+                "kind": "verifier",
+                "status": quality.get("status", "unknown"),
+                "summary": f"质量状态 {quality.get('status', 'unknown')}，得分 {quality.get('score', '-')}。",
+                "detail": "未通过项：" + "、".join(failed_checks) if failed_checks else "基础校验通过：资料依据、教具不编造、上下文路线和安全提醒符合当前任务。",
+            },
+        ]
 
     def _classify_intent(self, state: AgentState) -> dict[str, Any]:
         if self._is_catalog_query(state.message):
@@ -733,6 +820,9 @@ class EduToyAgent:
         experiment_words = [
             "实验",
             "教具",
+            "演示仪",
+            "探究仪",
+            "仪器",
             "玩具",
             "动手",
             "制作",

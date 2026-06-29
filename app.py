@@ -451,6 +451,90 @@ render_html(
         line-height: 1.45;
         font-size: 0.86rem;
     }
+    .trace-strip {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin: 10px 0 16px;
+    }
+    .trace-metric {
+        background: #ffffff;
+        border: 1px solid #dfe6f4;
+        border-radius: 14px;
+        padding: 12px 14px;
+        color: #293042;
+    }
+    .trace-metric strong {
+        display: block;
+        font-size: 1.05rem;
+        margin-bottom: 2px;
+    }
+    .trace-metric span {
+        color: #788195;
+        font-size: 0.82rem;
+    }
+    .trace-timeline {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin: 12px 0 18px;
+    }
+    .trace-card {
+        display: grid;
+        grid-template-columns: 42px minmax(0, 1fr);
+        gap: 12px;
+        background: #ffffff;
+        border: 1px solid #dfe6f4;
+        border-radius: 14px;
+        padding: 13px 14px;
+        box-shadow: 0 10px 22px rgba(42, 56, 84, 0.05);
+    }
+    .trace-index {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #edf2ff;
+        color: #3157f6;
+        font-weight: 900;
+        border: 1px solid #cbd8ff;
+    }
+    .trace-card.done .trace-index,
+    .trace-card.pass .trace-index { background: #eafaf4; color: #1d8f5b; border-color: #bdebd8; }
+    .trace-card.skipped .trace-index { background: #f3f5fb; color: #8791a3; border-color: #dfe6f4; }
+    .trace-card.review .trace-index,
+    .trace-card.unknown .trace-index { background: #fff5dc; color: #a16207; border-color: #f2d58b; }
+    .trace-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        color: #293042;
+        font-weight: 850;
+        margin-bottom: 4px;
+    }
+    .trace-kind {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        background: #f4f7ff;
+        color: #5d677b;
+        font-size: 0.74rem;
+        padding: 2px 8px;
+        border: 1px solid #e0e7ff;
+    }
+    .trace-summary {
+        color: #3f485c;
+        line-height: 1.55;
+        margin-bottom: 4px;
+    }
+    .trace-detail {
+        color: #788195;
+        line-height: 1.5;
+        font-size: 0.88rem;
+    }
     .check-grid {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -529,7 +613,7 @@ render_html(
     div[data-testid="stAlert"] * { color: #473719 !important; }
     @media (max-width: 860px) {
         .cards-grid { grid-template-columns: 1fr; margin-left: 0; }
-        .agent-grid, .check-grid { grid-template-columns: 1fr; }
+        .agent-grid, .check-grid, .trace-strip { grid-template-columns: 1fr; }
         .chat-row { grid-template-columns: 46px minmax(0, 1fr); }
         .bot-avatar, .user-avatar { width: 38px; height: 38px; }
     }
@@ -848,6 +932,56 @@ def render_agent_architecture(result) -> None:
         st.markdown(f"- **{tool['name']}**：{tool['role']}")
 
 
+def render_agent_trajectory(result) -> None:
+    quality = result.quality_checks or {}
+    used_tools = quality.get("used_tools", [])
+    trajectory = getattr(result, "trajectory", None) or []
+    render_html(
+        f"""
+        <div class="trace-strip">
+          <div class="trace-metric"><strong>{escape(result.intent)}</strong><span>识别意图</span></div>
+          <div class="trace-metric"><strong>{len(used_tools)}</strong><span>调用/启用工具</span></div>
+          <div class="trace-metric"><strong>{len(result.documents)}</strong><span>本地资料命中</span></div>
+          <div class="trace-metric"><strong>{escape(str(quality.get("score", "-")))}</strong><span>质量得分</span></div>
+        </div>
+        """
+    )
+
+    if not trajectory:
+        st.info("当前结果还没有结构化轨迹。可以重新运行一次 Agent。")
+        return
+
+    render_html('<div class="trace-timeline">')
+    for idx, item in enumerate(trajectory, start=1):
+        status = escape(str(item.get("status", "unknown")))
+        kind = escape(str(item.get("kind", "step")))
+        phase = escape(str(item.get("phase", f"步骤 {idx}")))
+        summary = escape(str(item.get("summary", "")))
+        detail = escape(str(item.get("detail", "")))
+        render_html(
+            f"""
+            <div class="trace-card {status}">
+              <div class="trace-index">{idx}</div>
+              <div>
+                <div class="trace-title">{phase}<span class="trace-kind">{kind} · {status}</span></div>
+                <div class="trace-summary">{summary}</div>
+                <div class="trace-detail">{detail}</div>
+              </div>
+            </div>
+            """
+        )
+    render_html("</div>")
+
+    with st.expander("查看原始运行日志 steps"):
+        for idx, step in enumerate(result.steps, start=1):
+            st.markdown(f"#### {idx}. {step.name} · {step.kind}")
+            st.write(step.detail)
+            if step.output.strip().startswith("{"):
+                st.code(step.output, language="json")
+            else:
+                st.write(step.output)
+
+
 def render_quality_checks(result) -> None:
     quality = result.quality_checks or {}
     st.metric("质量得分", quality.get("score", "-"), quality.get("status", "unknown"))
@@ -1052,13 +1186,7 @@ else:
         with arch_tab:
             render_agent_architecture(result)
         with trace_tab:
-            for idx, step in enumerate(result.steps, start=1):
-                st.markdown(f"#### {idx}. {step.name} · {step.kind}")
-                st.write(step.detail)
-                if step.output.strip().startswith("{"):
-                    st.code(step.output, language="json")
-                else:
-                    st.write(step.output)
+            render_agent_trajectory(result)
         with docs_tab:
             for doc in result.documents:
                 render_html(
