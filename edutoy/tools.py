@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from futuremajor.retrieval import Document, LocalRetriever
+from edutoy.retrieval import Document, LocalRetriever
 
 
 def list_teaching_aids(retriever: LocalRetriever) -> list[Document]:

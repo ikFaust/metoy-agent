@@ -1,32 +1,33 @@
-# FutureMajor Agent RAG 设计
+# Metoy 科学小导师 RAG 设计
 
 ## 当前 MVP
 
-当前版本使用轻量本地检索，不依赖付费 embedding。
+当前版本使用轻量本地检索，不依赖付费 embedding 或向量数据库。
 
 流程：
 
 ```text
-data/processed/knowledge.jsonl
+data/edutoy/documents.jsonl
   -> LocalRetriever 读取为 Document
-  -> 对 title/tags/content 做分词
-  -> 根据用户画像拼出检索 query
+  -> 对 title/tags/content 做关键词和中文短语分词
+  -> 根据学生问题、学段、知识点和约束拼出检索 query
   -> BM25 + tag bonus 排序
-  -> 合并画像匹配的专业候选
   -> 把 top documents 交给 Agent/GLM
-  -> 生成带依据的报告
+  -> 生成知识讲解、教具清单或实验指导
 ```
 
 每条知识都是一行 JSON：
 
 ```json
 {
-  "id": "major_cs",
-  "category": "major",
-  "title": "计算机科学与技术",
-  "content": "学习编程、算法、操作系统、数据库...",
-  "tags": ["计算机", "软件", "高薪", "AI", "理工"],
-  "source": "seed_major_profile"
+  "id": "edutoy_0001",
+  "category": "manual",
+  "level": "通用",
+  "title": "平面镜成像演示仪说明书",
+  "content": "用于观察平面镜成像特点...",
+  "tags": ["平面镜", "成像", "光学", "教具"],
+  "path": "本地原始资料路径",
+  "source": "local_material"
 }
 ```
 
@@ -37,29 +38,42 @@ data/processed/knowledge.jsonl
 RAG 的核心不是必须使用向量数据库，而是：
 
 1. 先从外部知识库检索相关资料。
-2. 再把检索结果作为上下文交给大模型。
-3. 让模型基于资料回答，而不是只靠模型记忆。
+2. 再把检索结果作为上下文交给大模型或规则生成器。
+3. 让回答基于资料，而不是只靠模型记忆自由发挥。
 
-当前版本的 retriever 是 BM25/关键词检索；后续可以替换为 embedding + Chroma/FAISS。
+当前版本的 retriever 是 BM25/关键词检索；开发者控制台会展示命中文档和 Agent 轨迹，因此可以看见系统到底用了哪些资料。
 
 ## 为什么先不用 embedding
 
 - 不需要额外 API 成本。
-- 数据量只有几十到几百条时，关键词检索已经够用。
-- 对中文专业名、城市名、规则标签这种短文本，标签和 BM25 很容易解释。
-- 作业报告里可以清楚展示每条建议来自哪些资料。
+- 当前知识库只有 192 条文档片段，关键词检索已经能跑通 MVP。
+- 教具名、知识点、实验关键词非常明确，BM25 容易解释。
+- 作业报告里可以清楚展示每条回答来自哪些资料。
+
+## 教具目录为什么单独做工具
+
+“你们有哪些教具？”不是开放问答，而是标准目录查询。如果直接交给大模型生成，模型可能编造不存在的产品。
+
+所以系统单独设计了 Teaching Aid Catalog：
+
+```text
+catalog_query
+  -> 只筛选 category = manual 的文档
+  -> 返回本地说明书中的真实教具
+  -> 质量校验检查是否存在编造教具
+```
 
 ## 后续升级
 
 后续可以加一层向量检索：
 
 ```text
-knowledge.jsonl
+documents.jsonl
   -> embedding model
   -> Chroma/FAISS vector store
   -> semantic search
-  -> rerank with profile rules
-  -> GLM report generation
+  -> rerank with topic/tool rules
+  -> GLM answer generation
 ```
 
 推荐保留 BM25 和标签检索，形成 hybrid retrieval：
@@ -67,10 +81,9 @@ knowledge.jsonl
 ```text
 BM25 keyword score
 + vector similarity score
-+ profile match score
++ teaching-aid category boost
 + source reliability score
 = final retrieval score
 ```
 
-这样既能搜到语义相关资料，也不会丢掉专业名、城市名、选科要求这种精确关键词。
-
+这样既能搜到语义相关资料，也不会丢掉“平面镜成像演示仪”“数显式液体压强探究仪”这种精确教具名。

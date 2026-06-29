@@ -12,9 +12,9 @@ from edutoy.memory import (
     resolve_follow_up_reference,
     should_use_llm_context_resolver,
 )
+from edutoy.llm import GLMClient
+from edutoy.retrieval import Document, LocalRetriever
 from edutoy.tools import list_teaching_aids, safety_check
-from futuremajor.llm import GLMClient
-from futuremajor.retrieval import Document, LocalRetriever
 
 
 @dataclass

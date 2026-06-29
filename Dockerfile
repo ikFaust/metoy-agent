@@ -8,11 +8,10 @@ ENV PYTHONUNBUFFERED=1
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app.py README.md deepseek_html_20260620_f1cabf.html ./
+COPY app.py README.md ./
 COPY data ./data
 COPY docs ./docs
 COPY edutoy ./edutoy
-COPY futuremajor ./futuremajor
 COPY static ./static
 COPY .streamlit ./.streamlit
 

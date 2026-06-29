@@ -35,9 +35,8 @@ render.yaml
 data/
 docs/
 edutoy/
-futuremajor/
 scripts/
-deepseek_html_20260620_f1cabf.html
+static/
 ```
 
 ## 上传 GitHub 时不应该包含

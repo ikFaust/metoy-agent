@@ -97,6 +97,6 @@ render.yaml
 data/
 docs/
 edutoy/
-futuremajor/
-deepseek_html_20260620_f1cabf.html
+scripts/
+static/
 ```

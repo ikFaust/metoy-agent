@@ -1,2 +1,0 @@
-"""FutureMajor Agent package."""
-
