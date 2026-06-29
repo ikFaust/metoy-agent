@@ -13,7 +13,6 @@ from edutoy.agent import EduToyAgent
 
 ROOT = Path(__file__).parent
 INDEX_PATH = ROOT / "data" / "edutoy" / "documents.jsonl"
-STORE_STATIC_URL = "/app/static/store/%E5%95%86%E5%9F%8E.html"
 
 st.set_page_config(page_title="Metoy 科学小导师", page_icon="ET", layout="wide", initial_sidebar_state="expanded")
 
@@ -1020,7 +1019,25 @@ def render_store() -> None:
     if not (ROOT / "static" / "store" / "商城.html").exists():
         st.error("没有找到商店网页文件。")
         return
-    components.iframe(STORE_STATIC_URL, height=760, scrolling=True)
+    store_html = (ROOT / "static" / "store" / "商城.html").read_text(encoding="utf-8")
+    store_html = store_html.replace(
+        "<head>",
+        '<head><base href="/app/static/store/">',
+        1,
+    )
+    for page_name in ["彝历漆盘·星斗棋.html", "傣族竹楼榫卯积木+声学探索.html"]:
+        page_path = ROOT / "static" / "store" / page_name
+        if page_path.exists():
+            page_html = page_path.read_text(encoding="utf-8").replace(
+                "<head>",
+                '<head><base href="/app/static/store/">',
+                1,
+            )
+            store_html = store_html.replace(
+                f'<iframe src="{page_name}"></iframe>',
+                f'<iframe srcdoc="{escape(page_html, quote=True)}"></iframe>',
+            )
+    components.html(store_html, height=760, scrolling=True)
 
 
 init_sessions()
